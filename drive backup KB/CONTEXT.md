@@ -63,4 +63,3 @@ _Avoid_: log, email, status text
 **Recovery Drill**:
 A deliberate check that backed-up files can be found and opened from Drive after setup.
 _Avoid_: restore test, QA pass
-
