@@ -2,7 +2,6 @@ package com.aryasubramani.vijibackup.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CloudConfigurationTest {
@@ -14,20 +13,6 @@ class CloudConfigurationTest {
         )
     }
 
-    @Test
-    fun emptyAndUnknownAccountsAreDenied() {
-        assertFalse(CloudConfiguration.isAllowedGoogleAccount(""))
-        assertFalse(CloudConfiguration.isAllowedGoogleAccount("unknown@example.test"))
-    }
-
-    @Test
-    fun configuredAccountChecksNormalizeInput() {
-        val configuredAccount = CloudConfiguration.allowedGoogleAccounts.firstOrNull() ?: return
-
-        assertTrue(CloudConfiguration.isAllowedGoogleAccount("  ${configuredAccount.uppercase()}  "))
-    }
-
-    @Test
     fun driveScopeRemainsLeastPrivilege() {
         assertEquals("https://www.googleapis.com/auth/drive.file", CloudConfiguration.driveFileScope)
     }

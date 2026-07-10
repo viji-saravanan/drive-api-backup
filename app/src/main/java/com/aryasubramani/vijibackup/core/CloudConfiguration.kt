@@ -20,6 +20,4 @@ object CloudConfiguration {
         .map { it.lowercase(Locale.ROOT) }
         .toSet()
 
-    fun isAllowedGoogleAccount(email: String): Boolean =
-        email.trim().lowercase(Locale.ROOT) in allowedGoogleAccounts
 }
