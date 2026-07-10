@@ -17,7 +17,7 @@ do_not_read_when:
 
 ## Goal Capsule
 
-Implement Google sign-in and a bundled approved-account gate for `Viji Backup`.
+Implement Google sign-in and a build-configured approved-account gate for `Viji Backup`.
 An approved Google account may enter the app. An unapproved account is shown a
 blocked state and cannot reach later backup workflows. Sign-out must remove local
 auth state and notify Credential Manager to clear provider session state.
@@ -28,12 +28,9 @@ narrowest viable Drive scope.
 
 ## Confirmed Inputs
 
-Approved account emails:
-
-- `owner.primary@example.test`
-- `owner.alternate@example.test`
-- `primary.user@example.test`
-- `alternate.user@example.test`
+Four accounts are approved: two project-owner identities and two primary-user
+identities. Actual addresses are supplied through ignored local configuration or
+encrypted CI values and must never appear in tracked plans, source, or tests.
 
 Existing Android OAuth client IDs remain mapped to the internal and public
 Android application IDs. They are not the Web application client ID required by
@@ -72,7 +69,7 @@ immediately discards the raw ID token.
 
 Consequences:
 
-- the bundled allowlist is a safety and product gate in an untampered APK;
+- the build-configured allowlist is a safety and product gate in an untampered APK;
 - it is not a tamper-resistant authorization service;
 - Google Drive sharing and OAuth grants remain the authoritative data-access
   boundary;
