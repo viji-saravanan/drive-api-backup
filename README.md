@@ -45,3 +45,9 @@ Instrumented tests require an emulator or device:
 ```bash
 ./gradlew :app:connectedInternalDebugAndroidTest
 ```
+
+## Private Build Configuration
+
+Tracked source contains no personal account addresses, Drive folder IDs, or OAuth client IDs. For local builds, copy `private.properties.example` to the ignored `private.properties` file and provide the approved values there. CI must provide the equivalent `VIJI_BACKUP_*` environment variables from encrypted repository secrets.
+
+Do not commit `private.properties`. A clean checkout intentionally builds with an empty allowlist and empty cloud identifiers, causing cloud access to fail closed.

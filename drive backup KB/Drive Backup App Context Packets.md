@@ -70,7 +70,7 @@ Required notes:
 
 Exit checks:
 
-- Work happens inside `<repository-root>`.
+- Work happens inside the current clone's repository root; never assume a contributor-specific absolute path.
 - The roadmap phase is named before edits begin.
 - The build/test command for the phase is known.
 - The change does not skip ahead into feature implementation.

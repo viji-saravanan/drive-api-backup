@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-08
+last_updated: 2026-07-10
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -42,50 +42,39 @@ Known files:
 - app context instrumented smoke test
 - `README.md`
 
-## Confirmed Cloud Setup Values
+## Confirmed Cloud Setup State
 
-These values are non-secret configuration and may appear in the private repo and APK. Do not commit downloaded OAuth JSON bundles, refresh tokens, app passwords, service account keys, or signing keystores.
+Personal identifiers and cloud resource IDs are private configuration even when they are not authentication secrets. They must not appear in tracked files or Git history. Real values are held in the ignored `private.properties` file for local builds and encrypted repository secrets for CI.
 
-Allowed Google accounts:
+Allowed Google account roles:
 
-- `owner.primary@example.test`
-- `owner.alternate@example.test`
-- `primary.user@example.test`
-- `alternate.user@example.test`
+- two project-owner identities;
+- two primary-user identities;
+- no other approved identities.
 
 Drive destination:
 
 - Parent folder: `My Drive > Viji > BACKUP`
-- Parent folder ID: `<private-drive-parent-folder-id>`
 - Upload folder: `My Drive > Viji > BACKUP > Viji Phone Uploads`
-- Upload folder ID: `<private-drive-upload-folder-id>`
-- Upload folder owner: `owner.primary@example.test`
+- Parent and upload folder IDs are private build/deployment configuration.
+- Upload folder owner is the project-owner Google account.
 
-Manual Drive access tests passed for:
+Manual Drive access tests passed for both primary-user identities and the alternate owner identity. Each tested account could open the upload folder, create a test folder, upload a test file, and delete its own test file.
 
-- `primary.user@example.test`
-- `alternate.user@example.test`
-- `owner.alternate@example.test`
-
-Each tested account could open the upload folder, create a test folder, upload a test file, and delete its own test file.
-
-OAuth debug client IDs:
-
-- Internal debug package `com.aryasubramani.vijibackup.internal`: `<private-internal-android-oauth-client-id>`
-- Public debug package `com.aryasubramani.vijibackup`: `<private-public-android-oauth-client-id>`
+Separate Android OAuth debug clients exist for `com.aryasubramani.vijibackup.internal` and `com.aryasubramani.vijibackup`. Their client IDs are private build configuration and are intentionally omitted here.
 
 The OAuth client mapping is based on the creation order followed during setup. Before implementing auth, verify this mapping in Google Cloud Console because the downloaded JSON did not include package metadata.
 
 Email notification defaults:
 
-- Sender: `owner.primary@example.test`
-- Recipients for now: all allowed accounts.
+- Sender: project-owner account, configured in the server-side relay.
+- Recipients: project owner and primary user, configured in the server-side relay.
 - Preferred method: Google Apps Script `MailApp` relay owned by Arya.
 
 ## Current Gaps
 
 - Root is a git repository on branch `setup/phase-1-foundation`.
-- Git account switcher profiles verified: `arya-personal` maps to `callmearya` with `owner.primary@example.test`; `viji` maps to `viji-saravanan` with `alternate.user@example.test`.
+- Git account switcher profiles are verified for `callmearya` and `viji-saravanan`; both commit with their GitHub-provided `noreply` identity.
 - Current workflow intentionally splits commits between Arya personal and Viji. Never commit from Arya work.
 - Project name is now `Viji Backup`.
 - Base application ID is now `com.aryasubramani.vijibackup`.

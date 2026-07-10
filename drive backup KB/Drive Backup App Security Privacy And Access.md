@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-security-privacy-access
 status: active
-last_updated: 2026-07-08
+last_updated: 2026-07-10
 context_role: security-privacy
 read_when:
   - The agent touches auth, Drive sharing, tokens, email, encryption, or privacy.
@@ -30,15 +30,10 @@ Confirmed destination:
 
 - Parent: `My Drive > Viji > BACKUP`
 - Upload child: `My Drive > Viji > BACKUP > Viji Phone Uploads`
-- Upload folder ID: `<private-drive-upload-folder-id>`
-- Owner: `owner.primary@example.test`
+- Upload folder ID: supplied through ignored or encrypted private configuration.
+- Owner: project-owner Google account; address is not committed.
 
-Approved Editor accounts for the upload child:
-
-- `primary.user@example.test`
-- `alternate.user@example.test`
-- `owner.alternate@example.test`
-- `owner.primary@example.test` as owner
+The upload child grants Editor access to both primary-user accounts and the alternate owner account. The project-owner account owns the folder. Actual addresses remain in Google Drive ACLs and private deployment configuration only.
 
 The app should clearly state:
 
@@ -50,14 +45,9 @@ Prefer the narrowest Drive scope that supports the final implementation. Start b
 
 ## Allowlist
 
-MVP can use a bundled allowlist for approved Google account emails.
+MVP currently accepts an allowlist supplied at build time from ignored local configuration or encrypted CI values. A clean checkout has an empty allowlist and therefore denies every account.
 
-Confirmed MVP allowlist:
-
-- `owner.primary@example.test`
-- `owner.alternate@example.test`
-- `primary.user@example.test`
-- `alternate.user@example.test`
+Removing addresses from Git does not hide plaintext addresses embedded in a distributed APK. Before publishing an APK containing the production gate, replace plaintext email matching with opaque Google subject identifiers, a server-side decision, or Drive-ACL authorization. Drive permissions remain the authoritative data boundary because a modified client can bypass any bundled check.
 
 Future version can support a remotely fetched allowlist only if:
 
@@ -79,7 +69,7 @@ Email summaries include failed filenames because the user requested that behavio
 
 Email should not include file contents.
 
-MVP notification method is a Google Apps Script `MailApp` relay owned by `owner.primary@example.test`. Do not embed SMTP passwords, Gmail app passwords, refresh tokens, or Apps Script relay secrets directly in source code or APK resources.
+MVP notification method is a Google Apps Script `MailApp` relay owned by the project owner. Sender and recipient addresses belong in server-side Script Properties. Do not embed those addresses, SMTP passwords, Gmail app passwords, refresh tokens, or Apps Script relay secrets directly in source code or APK resources.
 
 Default email fields:
 

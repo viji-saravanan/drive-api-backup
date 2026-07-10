@@ -1,6 +1,6 @@
 # Viji Backup Project Instructions
 
-This repository root is `<repository-root>`.
+The repository root is the directory containing this file. Never assume another contributor has the same username, home directory, or checkout path.
 
 `KB` means knowledge base. The project knowledge base lives in `drive backup KB/`.
 
@@ -38,6 +38,7 @@ Do not full-send the app in one pass. Work phase by phase, and keep every phase 
 - State which official docs were checked when the change touches platform behavior.
 - Do not push directly to `dev` or `main`.
 - Do not add secrets, OAuth tokens, Drive credentials, SMTP credentials, or GitHub tokens to the repo.
+- Do not commit personal email addresses, Drive folder IDs, OAuth client IDs, or machine-specific absolute paths. Use `example.test` identities in tests and the ignored private configuration contract for real values.
 - Use the Git account switcher before every commit and push. This project intentionally splits commit attribution between Arya personal and Viji; do not leave commits under Arya work.
 
 ## Change-Impact Discipline

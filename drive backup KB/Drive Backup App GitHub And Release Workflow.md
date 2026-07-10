@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-github-release-workflow
 status: active
-last_updated: 2026-07-08
+last_updated: 2026-07-10
 context_role: release-process
 read_when:
   - The agent works on GitHub setup, branches, commits, APKs, releases, or account switching.
@@ -79,6 +79,7 @@ Before every commit and push:
 - Confirm remote URL.
 - Confirm branch name.
 - Confirm no secrets in diff.
+- Confirm commit email uses the selected account's GitHub `noreply` address.
 
 Use Arya personal and Viji intentionally according to the commit attribution split above. Never commit or push from Arya work unless the user explicitly changes this rule.
 
@@ -90,6 +91,8 @@ Use two build flavors or release channels:
 - `public`: user-safe diagnostics, no private toggles, public release candidate.
 
 Both channels must be signed. Neither channel may contain Google tokens, service account keys, SMTP passwords, GitHub tokens, or personal secrets.
+
+Tracked source, tests, and KB notes must also omit personal email addresses, Drive folder IDs, OAuth client IDs, and contributor-specific filesystem paths. Supply real cloud configuration through the ignored `private.properties` contract locally and encrypted environment variables in CI. Notification recipients remain server-side.
 
 ## Release Checklist
 

@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-open-questions-assumptions
 status: active
-last_updated: 2026-07-08
+last_updated: 2026-07-10
 context_role: assumptions
 read_when:
   - The agent needs unresolved decisions, risks, or assumptions.
@@ -23,11 +23,11 @@ do_not_read_when:
 - Client-side encryption is future-only.
 - Do not store Arya's Drive credentials on user devices.
 - Do not auto-delete remote files in MVP.
-- Drive upload folder is `My Drive > Viji > BACKUP > Viji Phone Uploads`, owned by `owner.primary@example.test`.
-- Allowed accounts are `owner.primary@example.test`, `owner.alternate@example.test`, `primary.user@example.test`, and `alternate.user@example.test`.
-- Completion email should go to Arya and Viji; MVP config currently includes all allowed accounts until primary notification aliases are narrowed.
+- Drive upload folder is `My Drive > Viji > BACKUP > Viji Phone Uploads`, owned by the project owner's Google account.
+- Four Google accounts are approved: two owner identities and two primary-user identities. Actual addresses live only in ignored or encrypted private configuration.
+- Completion email should go to the owner and primary user. Actual recipients must be configured in the server-side mail relay, not in the APK.
 - MVP email method is Google Apps Script `MailApp` relay owned by Arya.
-- OPPO CPH2527 is the first known target phone model; exact Android version is pending physical device access.
+- An OPPO phone is the first target device; exact model and Android version remain private until live-device validation.
 
 ## Assumptions
 
@@ -45,7 +45,7 @@ do_not_read_when:
 | Does upload into Arya's shared My Drive folder count against Arya's storage or the uploading user's storage? | Quota behavior affects user expectations and failure handling. | Phase 4 Drive destination spike |
 | Can `drive.file` plus folder selection support the desired shared folder workflow end to end? | Determines OAuth scope risk and consent complexity. | Phase 4 Drive destination spike |
 | What is the first supported Android version? | Affects permissions, WorkManager behavior, and testing matrix. | Android project setup |
-| Should public APK allow only preconfigured allowlisted users? | Affects onboarding and support. | Before public release |
+| Should the public APK gate users with opaque Google subject identifiers, a server-side policy, or the authoritative Drive ACL? | Plain email allowlists injected into an APK can still be extracted even when absent from Git. | Before public release |
 | Should MVP preserve old remote versions before overwrite? Recommended answer: yes, keep last 3 versions or 30 days, whichever is smaller. | Protects against corrupt or unwanted local changes being uploaded over the only good backup; costs Drive storage. | Before changed-file upload implementation |
 | Should MVP include basic exclusions only, or full include/exclude pattern rules? Recommended answer: basic exclusions only. | Full pattern rules are useful but can delay the core backup engine. | Before settings implementation |
 
