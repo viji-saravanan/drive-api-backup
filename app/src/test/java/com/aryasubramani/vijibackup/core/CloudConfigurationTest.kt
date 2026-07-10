@@ -31,4 +31,16 @@ class CloudConfigurationTest {
     fun driveScopeRemainsLeastPrivilege() {
         assertEquals("https://www.googleapis.com/auth/drive.file", CloudConfiguration.driveFileScope)
     }
+
+    @Test
+    fun googleSignInConfigurationUsesASeparateWebClientId() {
+        assertEquals(
+            CloudConfiguration.googleSignInWebClientId.isNotBlank(),
+            CloudConfiguration.isGoogleSignInConfigured,
+        )
+        assertFalse(
+            CloudConfiguration.googleSignInWebClientId.isNotEmpty() &&
+                CloudConfiguration.googleSignInWebClientId == CloudConfiguration.androidOAuthClientId,
+        )
+    }
 }

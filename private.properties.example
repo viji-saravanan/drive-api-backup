@@ -5,3 +5,4 @@ vijiBackup.driveUploadFolderId=your_shared_drive_folder_id
 vijiBackup.allowedGoogleAccounts=allowed.user@example.test,alternate.user@example.test
 vijiBackup.internalAndroidOAuthClientId=your_internal_android_oauth_client_id
 vijiBackup.publicAndroidOAuthClientId=your_public_android_oauth_client_id
+vijiBackup.googleWebClientId=your_web_oauth_client_id

@@ -9,6 +9,10 @@ object CloudConfiguration {
     val driveUploadFolderId = BuildConfig.DRIVE_UPLOAD_FOLDER_ID.trim()
     val androidOAuthClientId = BuildConfig.ANDROID_OAUTH_CLIENT_ID.trim()
 
+    val googleSignInWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+    val isGoogleSignInConfigured: Boolean
+        get() = googleSignInWebClientId.isNotEmpty()
+
     val allowedGoogleAccounts = BuildConfig.ALLOWED_GOOGLE_ACCOUNTS
         .split(',')
         .map(String::trim)

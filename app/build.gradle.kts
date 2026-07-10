@@ -44,11 +44,16 @@ val publicAndroidOAuthClientId = privateConfigurationValue(
     gradleKey = "vijiBackup.publicAndroidOAuthClientId",
     environmentKey = "VIJI_BACKUP_PUBLIC_ANDROID_OAUTH_CLIENT_ID",
 )
+val googleWebClientId = privateConfigurationValue(
+    gradleKey = "vijiBackup.googleWebClientId",
+    environmentKey = "VIJI_BACKUP_GOOGLE_WEB_CLIENT_ID",
+)
 
 val oauthClientIdPattern = Regex("[0-9]+-[A-Za-z0-9_-]+\\.apps\\.googleusercontent\\.com")
 mapOf(
     "vijiBackup.internalAndroidOAuthClientId" to internalAndroidOAuthClientId,
     "vijiBackup.publicAndroidOAuthClientId" to publicAndroidOAuthClientId,
+    "vijiBackup.googleWebClientId" to googleWebClientId,
 ).forEach { (key, value) ->
     require(value.isEmpty() || value.matches(oauthClientIdPattern)) {
         "$key must be a Google OAuth client ID"
@@ -89,6 +94,11 @@ android {
             "String",
             "ALLOWED_GOOGLE_ACCOUNTS",
             normalizedAllowedGoogleAccounts.joinToString(",").asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            googleWebClientId.asBuildConfigString(),
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -144,12 +154,20 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.google.identity.googleid)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }
