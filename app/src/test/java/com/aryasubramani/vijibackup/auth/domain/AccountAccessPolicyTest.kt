@@ -1,6 +1,5 @@
 package com.aryasubramani.vijibackup.auth.domain
 
-import com.aryasubramani.vijibackup.core.CloudConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -10,10 +9,10 @@ import java.util.Locale
 
 class AccountAccessPolicyTest {
     @Test
-    fun everyConfirmedGoogleAccountIsApproved() {
-        val policy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts)
+    fun everyConfiguredTestAccountIsApproved() {
+        val policy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS)
 
-        CloudConfiguration.allowedGoogleAccounts.forEachIndexed { index, email ->
+        TEST_ALLOWED_GOOGLE_ACCOUNTS.forEachIndexed { index, email ->
             val account = requireNotNull(
                 GoogleAccount.create(
                     subject = "confirmed-account-$index",
@@ -28,7 +27,7 @@ class AccountAccessPolicyTest {
 
     @Test
     fun invalidCredentialClaimsCannotCreateAnAccount() {
-        assertNull(GoogleAccount.create(subject = "", email = "primary.user@example.test", displayName = null))
+        assertNull(GoogleAccount.create(subject = "", email = APPROVED_EMAIL, displayName = null))
         assertNull(GoogleAccount.create(subject = "google-subject", email = "", displayName = null))
         assertNull(
             GoogleAccount.create(
@@ -42,10 +41,10 @@ class AccountAccessPolicyTest {
     @Test
     fun invalidAllowlistConfigurationFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
-            AccountAccessPolicy(setOf("primary.user@example.test", "not-an-email-address"))
+            AccountAccessPolicy(setOf(APPROVED_EMAIL, "not-an-email-address"))
         }
         assertThrows(IllegalArgumentException::class.java) {
-            AccountAccessPolicy(setOf("primary.user@example.test", "  PRIMARY.USER@EXAMPLE.TEST "))
+            AccountAccessPolicy(setOf(APPROVED_EMAIL, "  PRIMARY.USER@EXAMPLE.TEST "))
         }
     }
 
@@ -57,16 +56,16 @@ class AccountAccessPolicyTest {
             val account = requireNotNull(
                 GoogleAccount.create(
                     subject = "  stable-google-subject  ",
-                    email = "  ALTERNATE.USER@EXAMPLE.TEST  ",
-                    displayName = "  Viji  ",
+                    email = "  PRIMARY.USER@EXAMPLE.TEST  ",
+                    displayName = "  Primary User  ",
                 ),
             )
 
             assertEquals("stable-google-subject", account.subject)
-            assertEquals("alternate.user@example.test", account.email)
-            assertEquals("Viji", account.displayName)
+            assertEquals(APPROVED_EMAIL, account.email)
+            assertEquals("Primary User", account.displayName)
             assertTrue(
-                AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts).evaluate(account) is
+                AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS).evaluate(account) is
                     AccountAccess.Approved,
             )
         } finally {
@@ -76,10 +75,10 @@ class AccountAccessPolicyTest {
 
     @Test
     fun aliasesAndLookalikeAddressesAreBlocked() {
-        val policy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts)
+        val policy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS)
         val unapprovedAddresses = listOf(
             "primary.user+backup@example.test",
-            "primary.user@example.test.example.org",
+            "primary.user@example.test.attacker.invalid",
             "primary.user@exampl3.test",
             "primary.user@example.invalid",
         )
@@ -97,3 +96,12 @@ class AccountAccessPolicyTest {
         }
     }
 }
+
+private const val APPROVED_EMAIL = "primary.user@example.test"
+
+private val TEST_ALLOWED_GOOGLE_ACCOUNTS = setOf(
+    APPROVED_EMAIL,
+    "alternate.user@example.test",
+    "owner.primary@example.test",
+    "owner.alternate@example.test",
+)

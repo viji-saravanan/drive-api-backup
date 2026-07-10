@@ -31,9 +31,9 @@ class DataStoreAuthSessionStoreInstrumentedTest {
         val store = DataStoreAuthSessionStore(dataStore)
         val account = requireNotNull(
             GoogleAccount.create(
-                subject = "live-viji-google-subject",
+                subject = "test-approved-google-subject",
                 email = "primary.user@example.test",
-                displayName = "Viji",
+                displayName = "Primary User",
             ),
         )
 

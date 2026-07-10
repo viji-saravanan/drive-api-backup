@@ -2,7 +2,6 @@ package com.aryasubramani.vijibackup.auth.data
 
 import com.aryasubramani.vijibackup.auth.domain.AccountAccessPolicy
 import com.aryasubramani.vijibackup.auth.domain.GoogleAccount
-import com.aryasubramani.vijibackup.core.CloudConfiguration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,7 +15,7 @@ class AuthSessionManagerTest {
         val store = RecordingAuthSessionStore()
         val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -34,7 +33,7 @@ class AuthSessionManagerTest {
         val store = RecordingAuthSessionStore().apply { account = approvedAccount() }
         val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -67,7 +66,7 @@ class AuthSessionManagerTest {
         }
         val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -83,7 +82,7 @@ class AuthSessionManagerTest {
     fun cachedAccountRequiresReauthenticationInsteadOfImmediateApproval() = runTest {
         val cachedAccount = approvedAccount()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = RecordingAuthSessionStore().apply { account = cachedAccount },
             credentialStateClearer = RecordingCredentialStateClearer(),
         )
@@ -98,7 +97,7 @@ class AuthSessionManagerTest {
         val store = RecordingAuthSessionStore().apply { account = approvedAccount() }
         val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -117,7 +116,7 @@ class AuthSessionManagerTest {
             clearFailure = IllegalStateException("test provider failure")
         }
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -138,7 +137,7 @@ class AuthSessionManagerTest {
         }
         val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -153,12 +152,12 @@ class AuthSessionManagerTest {
     @Test
     fun absentOrUnreadableCacheNeverCreatesAnApprovedSession() = runTest {
         val emptyManager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = RecordingAuthSessionStore(),
             credentialStateClearer = RecordingCredentialStateClearer(),
         )
         val failingManager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = RecordingAuthSessionStore().apply {
                 readFailure = IllegalStateException("test storage failure")
             },
@@ -179,7 +178,7 @@ class AuthSessionManagerTest {
             clearFailure = IllegalStateException("test provider failure")
         }
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = store,
             credentialStateClearer = credentialStateClearer,
         )
@@ -207,7 +206,7 @@ class AuthSessionManagerTest {
     @Test
     fun coroutineCancellationIsNeverConvertedToAnAuthFailure() {
         val manager = AuthSessionManager(
-            accessPolicy = AccountAccessPolicy(CloudConfiguration.allowedGoogleAccounts),
+            accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = RecordingAuthSessionStore().apply {
                 saveFailure = CancellationException("test cancellation")
             },
@@ -222,11 +221,14 @@ class AuthSessionManagerTest {
 
 private fun approvedAccount() = requireNotNull(
     GoogleAccount.create(
-        subject = "live-viji-google-subject",
-        email = "primary.user@example.test",
-        displayName = "Viji",
+        subject = "test-approved-google-subject",
+        email = TEST_APPROVED_EMAIL,
+        displayName = "Primary User",
     ),
 )
+
+private const val TEST_APPROVED_EMAIL = "primary.user@example.test"
+private val TEST_ALLOWED_GOOGLE_ACCOUNTS = setOf(TEST_APPROVED_EMAIL)
 
 private class RecordingAuthSessionStore : AuthSessionStore {
     var account: GoogleAccount? = null
