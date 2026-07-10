@@ -27,6 +27,12 @@ This register lists source-backed platform claims. Future agents must verify cur
 | Android app data backup | https://developer.android.com/identity/data/backup | 2026-07-08 | App's own settings backup must be considered carefully and must not include secrets. |
 | AGP 9 built-in Kotlin | https://developer.android.com/build/migrate-to-built-in-kotlin | 2026-07-08 | AGP 9 enables built-in Kotlin support, so the app should not apply the old Kotlin Android plugin while built-in Kotlin is enabled. |
 | Jetpack Compose setup | https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler | 2026-07-08 | Compose requires the Compose compiler Gradle plugin with Kotlin 2.x and Compose dependencies should use the Compose BOM. |
+| Credential Manager Sign in with Google overview | https://developer.android.com/identity/sign-in/credential-manager-siwg | 2026-07-10 | Use Credential Manager for Android authentication; Google Drive data access is a separate authorization action. |
+| Credential Manager Sign in with Google implementation | https://developer.android.com/identity/sign-in/credential-manager-siwg-implementation | 2026-07-10 | Implement both an authorized-account bottom-sheet path and an explicit button path; both require a Web application OAuth client ID. |
+| Credential Manager sign-out | https://developer.android.com/reference/androidx/credentials/CredentialManager#clearCredentialState(androidx.credentials.ClearCredentialStateRequest) | 2026-07-10 | Explicit app sign-out should clear local app state and notify credential providers with `clearCredentialState`. |
+| Google ID token credential | https://developers.google.com/identity/android-credential-manager/android/reference/com/google/android/libraries/identity/googleid/GoogleIdTokenCredential | 2026-07-10 | Google ID library 1.2 exposes token-parsed email and stable Google account ID; raw ID tokens must not be persisted or logged. |
+| Google ID token validation | https://developers.google.com/identity/gsi/web/guides/verify-google-id-token | 2026-07-10 | A relying-party server must validate token signature, audience, issuer, and expiry before treating an ID token as a server-side security identity. |
+| Google Android authorization client | https://developers.google.com/android/reference/com/google/android/gms/auth/api/identity/AuthorizationClient | 2026-07-10 | Request Google data scopes such as Drive separately from authentication and only when the feature needs them. |
 
 ## Google Drive Sources
 

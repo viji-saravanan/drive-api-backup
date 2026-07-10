@@ -151,6 +151,7 @@ Trigger phrases:
 
 Required notes:
 
+- [[Drive Backup App Phase 2 Auth Implementation Plan]]
 - [[Drive Backup App Product Requirements]]
 - [[Drive Backup App Security Privacy And Access]]
 - [[Drive Backup App Source Register]]
@@ -159,6 +160,7 @@ Required notes:
 Must verify:
 
 - Google OAuth consent and Drive scope docs before implementation.
+- Credential Manager Sign in with Google docs and Web client ID requirements before implementation.
 
 Exit checks:
 
