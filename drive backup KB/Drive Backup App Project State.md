@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-10
+last_updated: 2026-07-11
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -26,21 +26,28 @@ Knowledge base:
 <repository-root>/drive backup KB
 ```
 
-## Current Scaffold
+## Current Implementation
 
-The root contains a Phase 1 Android/Gradle scaffold for `Viji Backup`.
+Phase 1 foundation work is under review in PR #1. Phase 2 authentication work is
+published as draft PR #2 from `feature/phase-2-auth-allowlist`, stacked on
+`setup/phase-1-foundation`.
 
-Known files:
+Implemented Phase 2 slices:
 
-- `settings.gradle.kts`
-- `build.gradle.kts`
-- `app/build.gradle.kts`
-- `gradle/libs.versions.toml`
-- `app/src/main/AndroidManifest.xml`
-- minimal Compose shell
-- app identity unit test
-- app context instrumented smoke test
-- `README.md`
+- exact normalized account policy;
+- approved-account session manager with fail-closed persistence behavior;
+- Preferences DataStore metadata storage with corruption recovery;
+- explicit cloud-backup and device-transfer exclusion for cached auth metadata;
+- Credential Manager Google sign-in adapter and provider-state clearer;
+- private build configuration loaded outside Git;
+- internal and public debug flavors that coexist on one device.
+
+Not yet implemented:
+
+- launcher-level auth state and Compose presentation;
+- successful live Google sign-in because the Web OAuth client ID is missing;
+- Google Drive authorization or folder access;
+- any selected-folder sync behavior.
 
 ## Confirmed Cloud Setup State
 
@@ -73,19 +80,37 @@ Email notification defaults:
 
 ## Current Gaps
 
-- Root is a git repository on branch `setup/phase-1-foundation`.
+- Active development branch is `feature/phase-2-auth-allowlist`.
+- PR #2 is intentionally draft and must not merge before PR #1.
 - Git account switcher profiles are verified for `callmearya` and `viji-saravanan`; both commit with their GitHub-provided `noreply` identity.
 - Current workflow intentionally splits commits between Arya personal and Viji. Never commit from Arya work.
-- Project name is now `Viji Backup`.
-- Base application ID is now `com.aryasubramani.vijibackup`.
-- Namespace is now `com.aryasubramani.vijibackup`.
-- Minimal Compose app shell exists.
-- Default example tests have been replaced with app identity smoke tests.
-- AGP 9 built-in Kotlin support is used; the old Kotlin Android plugin is intentionally not declared.
+- The launcher still opens the Phase 1 shell; this is a known U5 release blocker.
+- Credential Manager adapter behavior beyond missing configuration needs fake-provider and live tests.
+- Public APK authorization must not depend on plaintext email values recoverable from the APK. Resolve the Drive-ACL versus trusted-verifier design before public release.
+- The source/review repository must remain private because immutable historical review excerpts retain old private configuration. A public repository must be created fresh from sanitized release commits.
 - No CI is configured.
 - No signing/release setup exists.
-- Android SDK platform `android-36.1` is installed locally; API 37 is not installed.
+- The physical test phone has about 1.5 GB free and is 99% used. Never delete user data automatically; treat low storage as an explicit test and operational risk.
 - Lint reports freshness warnings for target SDK, compile SDK, Core KTX, Gradle wrapper, and Compose compiler versions. These are documented in [[Drive Backup App Foundation Decisions]] and should be resolved deliberately in a future SDK/tooling update.
+
+## Physical Device Baseline
+
+Connected wired-ADB target:
+
+- Samsung Galaxy A23 (`SM-A236E`);
+- Android 14 / API 34;
+- One UI 6.1;
+- security patch `2026-05-05`;
+- Google Play services `26.24.34`;
+- device serial and account addresses intentionally excluded from evidence.
+
+Observed on 2026-07-11:
+
+- internal flavor: 6 instrumented tests, 0 failures, 0 errors;
+- public flavor: 6 instrumented tests, 0 failures, 0 errors;
+- both package IDs install and launch side by side;
+- launched processes produced no fatal, token-shaped, or email-shaped app logs;
+- the missing-Web-client test returns `ConfigurationRequired` before credential UI.
 
 ## Current Passing Checks
 
@@ -96,22 +121,23 @@ Email notification defaults:
 ./gradlew :app:testPublicDebugUnitTest
 ./gradlew :app:assembleInternalDebugAndroidTest
 ./gradlew :app:lintInternalDebug
+./gradlew :app:connectedInternalDebugAndroidTest
+./gradlew :app:connectedPublicDebugAndroidTest
 ```
 
-## Immediate Setup Goal
+## Immediate Phase 2 Goal
 
-Before feature work, complete roadmap Phase 1: Android Project Setup.
+Finish Phase 2 without treating the draft adapters as a completed access gate.
 
-Minimum Phase 1 output:
+Remaining gate:
 
-- keep git work on a branch, not `dev` or `main`;
-- app name and package/application ID are chosen;
-- repair or reinstall required Android SDK components;
-- make the scaffold build cleanly;
-- make smoke tests pass;
-- add root README or project overview;
-- document local build/test commands;
-- establish branch workflow before any pushes.
+- obtain the Web application OAuth client ID;
+- add exhaustive fake-provider Credential Manager mapping tests;
+- implement launcher auth state and Compose screens;
+- run the internal/public live account matrix on the Samsung;
+- verify restart, cancellation, account switching, sign-out, network failure, and log privacy;
+- resolve the public-APK authorization/privacy boundary;
+- keep PR #2 draft until those checks pass.
 
 ## Next Notes
 

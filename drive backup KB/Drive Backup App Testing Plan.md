@@ -149,6 +149,15 @@ Scenarios:
 - low storage condition where practical;
 - repeated cancellation and retry.
 
+Current physical baseline is Samsung Galaxy A23 (`SM-A236E`) on Android 14 / API
+34 and One UI 6.1. On 2026-07-11, both internal and public flavors completed six
+instrumented tests with zero failures or errors. This device currently has about
+1.5 GB free, so it is valid low-storage evidence but is not suitable for large
+sync data sets until the owner frees space manually.
+
+Do not record device serials or account addresses. Label real approved accounts
+as A1-A4 and a deliberately excluded real account as B1 in test evidence.
+
 ## Data Set Matrix
 
 Create test folders with:

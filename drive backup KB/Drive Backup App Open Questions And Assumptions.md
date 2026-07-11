@@ -27,7 +27,7 @@ do_not_read_when:
 - Four Google accounts are approved: two owner identities and two primary-user identities. Actual addresses live only in ignored or encrypted private configuration.
 - Completion email should go to the owner and primary user. Actual recipients must be configured in the server-side mail relay, not in the APK.
 - MVP email method is Google Apps Script `MailApp` relay owned by Arya.
-- An OPPO phone is the first target device; exact model and Android version remain private until live-device validation.
+- Samsung Galaxy A23 (`SM-A236E`) is the primary physical test device. It runs Android 14 / One UI 6.1; device serial and account addresses remain outside evidence.
 
 ## Assumptions
 
@@ -59,6 +59,7 @@ do_not_read_when:
 | Public APK leaks internal diagnostics | Separate build flavor and release checklist. |
 | Future AI skips failure handling | Index and context guide require loading failure matrix for implementation. |
 | Backup silently becomes stale | Health dashboard, stale warning, and recovery drill reminder. |
+| Primary phone is 99% full | Never delete user data automatically. Surface low-storage preflight and per-file failures, and require free-space recovery before large sync stress tests. |
 
 ## Next Notes
 

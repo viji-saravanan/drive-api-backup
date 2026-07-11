@@ -164,8 +164,12 @@ user-safe error categories.
 
 Run after KTD-1 is resolved:
 
-- each of the four approved accounts can sign in;
-- an unapproved test account is blocked;
+- use the Samsung Galaxy A23 physical baseline and record Android, One UI,
+  security patch, and Google Play services versions without its serial;
+- internal flavor: each approved account A1-A4 can sign in;
+- internal flavor: a real account B1 excluded only from the test build is blocked;
+- public flavor: one representative approved account and B1 prove the separate
+  package/OAuth mapping and isolated local session;
 - user cancellation is recoverable;
 - no Google account on device is handled;
 - switching from a blocked account to an approved account works;
@@ -175,6 +179,15 @@ Run after KTD-1 is resolved:
 - airplane mode and unavailable Google Play services produce recoverable UI;
 - rotation or process recreation during sign-in does not leave a stuck state;
 - `adb logcat` contains no ID token or raw credential payload.
+
+Completed before KTD-1 on 2026-07-11:
+
+- internal and public flavors each passed 6 instrumented tests on Android 14;
+- DataStore corruption recovery, recreation, clear persistence, package identity,
+  and missing-Web-client failure behavior passed;
+- both variants installed and launched side by side;
+- process logs contained no fatal, token-shaped, or email-shaped entries;
+- live account chooser and approval/block decisions remain untested.
 
 ## Implementation Units
 
