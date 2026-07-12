@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-context-packets
 status: active
-last_updated: 2026-07-08
+last_updated: 2026-07-12
 context_role: machine-friendly-context-manifest
 read_when:
   - A future AI agent needs exact note sets for a feature area.
@@ -61,6 +61,7 @@ Trigger phrases:
 
 Required notes:
 
+- [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
 - [[Drive Backup App Project State]]
 - [[Drive Backup App Implementation Roadmap]]
 - [[Drive Backup App GitHub And Release Workflow]]
@@ -74,6 +75,40 @@ Exit checks:
 - The roadmap phase is named before edits begin.
 - The build/test command for the phase is known.
 - The change does not skip ahead into feature implementation.
+
+## Packet: Fresh Laptop And Repeatable Testing
+
+Trigger phrases:
+
+- another laptop;
+- new contributor;
+- zero setup;
+- reproduce environment;
+- install Android Studio;
+- external SSD;
+- connect phone;
+- live auth setup;
+- frequent testing.
+
+Required notes:
+
+- [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
+- [[Drive Backup App Project State]]
+- [[Drive Backup App GitHub And Release Workflow]]
+- [[Drive Backup App Testing Plan]]
+- [[Drive Backup App Source Register]]
+
+Exit checks:
+
+- No contributor-specific absolute path or local account switcher is assumed.
+- Java, Gradle, SDK, `local.properties`, and optional external-drive setup are explicit.
+- Clean build-only setup is separated from private-configured and live-auth setup.
+- A fresh debug signing SHA-1 has matching internal/public Android OAuth clients.
+- OAuth test users, local allowlist, and device authorization are deliberate.
+- Private configuration is ignored and never printed or committed.
+- Baseline, fast-loop, pre-push, connected, and live test commands are named.
+- Source CI is zero-secret and does not publish configured APK artifacts.
+- The contributor works on a separate branch and targets the current phase branch.
 
 ## Packet: Android Engineering Method
 
@@ -389,6 +424,7 @@ Trigger phrases:
 
 Required notes:
 
+- [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
 - [[Drive Backup App Testing Plan]]
 - [[Drive Backup App Failure Matrix]]
 - [[Drive Backup App Product Requirements]]

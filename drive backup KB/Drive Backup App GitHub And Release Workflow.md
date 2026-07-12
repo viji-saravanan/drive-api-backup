@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-github-release-workflow
 status: active
-last_updated: 2026-07-10
+last_updated: 2026-07-12
 context_role: release-process
 read_when:
   - The agent works on GitHub setup, branches, commits, APKs, releases, or account switching.
@@ -25,6 +25,8 @@ Do not assume a private repository can expose only one release asset publicly wh
 - No direct push to `dev`.
 - No direct push to `main`.
 - Every work item uses a branch.
+- Stacked phase branches target the immediately preceding phase branch until
+  that base merges; retarget only after the base is integrated.
 - Branch naming:
   - `docs/<topic>`
   - `feature/<topic>`
@@ -42,6 +44,16 @@ Commit sequentially:
 5. release metadata.
 
 Each commit should be buildable where practical. Do not mix unrelated features.
+
+## Pull Request Rules
+
+- Open one PR for each work branch with a concrete title and complete description.
+- Confirm the PR base matches the current stacked phase, not `dev` by default.
+- After each push, add a redacted PR progress comment listing commits, exact test
+  commands/results, manual evidence, unresolved risks, and reviewer attention areas.
+- Never paste account addresses, cloud identifiers, device serials, raw logs, or
+  private screenshots into a PR.
+- Keep the PR draft while required release evidence or its base PR remains incomplete.
 
 ## Commit Attribution Split
 
@@ -92,7 +104,14 @@ Use two build flavors or release channels:
 
 Both channels must be signed. Neither channel may contain Google tokens, service account keys, SMTP passwords, GitHub tokens, or personal secrets.
 
-Tracked source, tests, and KB notes must also omit personal email addresses, Drive folder IDs, OAuth client IDs, and contributor-specific filesystem paths. Supply real cloud configuration through the ignored `private.properties` contract locally and encrypted environment variables in CI. Notification recipients remain server-side.
+Tracked source, tests, and KB notes must also omit personal email addresses,
+Drive folder IDs, OAuth client IDs, and contributor-specific filesystem paths.
+Supply real local configuration through ignored `private.properties`.
+
+The source-verification workflow is intentionally zero-secret and uploads no
+APK. A future private release workflow may read protected environment values,
+but it must disable caches/artifacts that could retain configured outputs unless
+the storage surface is explicitly approved. Notification recipients remain server-side.
 
 ## Release Checklist
 
@@ -103,6 +122,11 @@ Before publishing an APK:
 - Run release test gate from [[Drive Backup App Testing Plan]].
 - Verify app flavor.
 - Verify allowlist behavior.
+- Verify the public APK does not rely on a recoverable client-side allowlist as
+  authoritative data authorization; current Drive grant and destination ACL
+  checks must fail closed.
+- Confirm `validatePublicReleasePrivacy` passes for the intended public model;
+  never bypass the task or distribute a privately configured `publicDebug` APK.
 - Verify Drive folder setup.
 - Verify completion email.
 - Create release notes with known limitations.

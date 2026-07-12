@@ -2,7 +2,7 @@
 
 Viji Backup is a personal Android app for selected-folder backup to a shared Google Drive folder.
 
-The project is intentionally built in phases. The current phase is the Android foundation: app identity, build variants, a minimal Compose shell, documentation, and verification commands. Backup, Drive, auth, email, and sync features are not implemented yet.
+The project is intentionally built in phases. Phase 1 established the Android foundation. Phase 2 implements a fail-closed Google Credential Manager gate, exact local account policy, session metadata persistence, sign-out cleanup, and internal/public debug variants. Drive authorization, selected-folder sync, email, and release signing are not implemented yet.
 
 ## Project Root
 
@@ -24,6 +24,12 @@ For implementation work, also read:
 drive backup KB/Drive Backup App Engineering Change Discipline.md
 ```
 
+For a new laptop or repeatable device testing, follow:
+
+```text
+drive backup KB/Drive Backup App Fresh Laptop Setup And Test Runbook.md
+```
+
 ## App Identity
 
 - Display name: `Viji Backup`
@@ -38,16 +44,21 @@ drive backup KB/Drive Backup App Engineering Change Discipline.md
 ./gradlew :app:testInternalDebugUnitTest
 ./gradlew :app:assemblePublicDebug
 ./gradlew :app:testPublicDebugUnitTest
+./gradlew :app:lintInternalDebug
+./gradlew :app:lintPublicDebug
 ```
 
 Instrumented tests require an emulator or device:
 
 ```bash
 ./gradlew :app:connectedInternalDebugAndroidTest
+./gradlew :app:connectedPublicDebugAndroidTest
 ```
 
 ## Private Build Configuration
 
-Tracked source contains no personal account addresses, Drive folder IDs, or OAuth client IDs. For local builds, copy `private.properties.example` to the ignored `private.properties` file and provide the approved values there. CI must provide the equivalent `VIJI_BACKUP_*` environment variables from encrypted repository secrets.
+Tracked source contains no personal account addresses, Drive folder IDs, or OAuth client IDs. For local builds, copy `private.properties.example` to the ignored `private.properties` file and provide the approved values there. The source-verification workflow intentionally injects no private values, stores no configured APK artifact, and proves the fail-closed build state. Future private release jobs may use protected `VIJI_BACKUP_*` environment values but must not expose or cache configured artifacts.
 
 Do not commit `private.properties`. A clean checkout intentionally builds with an empty allowlist and empty cloud identifiers, causing cloud access to fail closed.
+
+Live Google auth from a fresh source-build laptop normally needs Android OAuth clients registered for that laptop's debug SHA-1 and both package IDs. The setup runbook documents the exact flow. Never provide an OAuth client secret to the Android app.

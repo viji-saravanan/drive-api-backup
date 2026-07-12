@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-index
 status: active
-last_updated: 2026-07-10
+last_updated: 2026-07-12
 context_role: entrypoint
 read_when:
   - Any future AI session starts work on the Android Drive backup app.
@@ -38,7 +38,8 @@ Load only the packet that matches the task. Do not read all notes by default.
 | Task | Load These Notes |
 |---|---|
 | Product scope or requirements | [[Drive Backup App Product Requirements]], [[Drive Backup App Strategy]], [[Drive Backup App Open Questions And Assumptions]] |
-| Current repo state or setup | [[Drive Backup App Project State]], [[Drive Backup App Implementation Roadmap]], [[Drive Backup App GitHub And Release Workflow]], [[Drive Backup App Testing Plan]] |
+| Current repo state or setup | [[Drive Backup App Fresh Laptop Setup And Test Runbook]], [[Drive Backup App Project State]], [[Drive Backup App Implementation Roadmap]], [[Drive Backup App GitHub And Release Workflow]], [[Drive Backup App Testing Plan]] |
+| Fresh laptop, external SDK, ADB, or repeatable local testing | [[Drive Backup App Fresh Laptop Setup And Test Runbook]], [[Drive Backup App Project State]], [[Drive Backup App Testing Plan]], [[Drive Backup App GitHub And Release Workflow]] |
 | Android engineering method | [[Drive Backup App Foundation Decisions]], [[Drive Backup App Android Engineering Research]], [[Drive Backup App Architecture]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
 | Any implementation or file edit | [[Drive Backup App Engineering Change Discipline]], then the packet for the touched feature |
 | Google sign-in, allowlist, or sign-out | [[Drive Backup App Phase 2 Auth Implementation Plan]], [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
@@ -49,7 +50,7 @@ Load only the packet that matches the task. Do not read all notes by default.
 | Google Drive shared folder behavior | [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Architecture]], [[Drive Backup App Source Register]] |
 | Email notification design | [[Drive Backup App Product Requirements]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Source Register]] |
 | Encryption discussion | [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Product Requirements]] |
-| Testing | [[Drive Backup App Testing Plan]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Product Requirements]] |
+| Testing | [[Drive Backup App Fresh Laptop Setup And Test Runbook]], [[Drive Backup App Testing Plan]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Product Requirements]] |
 | GitHub, APK release, or account switching | [[Drive Backup App GitHub And Release Workflow]], [[Drive Backup App Source Register]] |
 | Roadmap or sequencing | [[Drive Backup App Implementation Roadmap]], [[Drive Backup App Product Requirements]], [[Drive Backup App Testing Plan]] |
 | Terminology | [[Drive Backup App Glossary]] |
@@ -68,6 +69,7 @@ Do not infer Android, Google Drive, Gmail, Apps Script, or GitHub behavior from 
 - [[Drive Backup App Context Packets]]
 - [[Drive Backup App Engineering Change Discipline]]
 - [[Drive Backup App Foundation Decisions]]
+- [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
 - [[Drive Backup App Project State]]
 - [[Drive Backup App Phase 2 Auth Implementation Plan]]
 - [[Drive Backup App Android Engineering Research]]
