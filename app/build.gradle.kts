@@ -1,4 +1,21 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
+import java.util.Locale
 import java.util.Properties
+
+abstract class ValidatePublicReleasePrivacy : DefaultTask() {
+    @get:Input
+    abstract val containsPrivateConfiguration: Property<Boolean>
+
+    @TaskAction
+    fun validate() {
+        require(!containsPrivateConfiguration.get()) {
+            "Public release cannot embed private account or Drive configuration"
+        }
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -60,14 +77,39 @@ mapOf(
     }
 }
 
+require(
+    googleWebClientId.isEmpty() ||
+        googleWebClientId != internalAndroidOAuthClientId &&
+        googleWebClientId != publicAndroidOAuthClientId,
+) {
+    "vijiBackup.googleWebClientId must be separate from Android OAuth clients"
+}
+
 val normalizedAllowedGoogleAccounts = allowedGoogleAccounts
     .split(',')
     .map(String::trim)
     .filter(String::isNotEmpty)
-    .map(String::lowercase)
+    .map { account -> account.lowercase(Locale.ROOT) }
+
+val googleAccountEmailPattern = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+require(normalizedAllowedGoogleAccounts.all { it.matches(googleAccountEmailPattern) }) {
+    "vijiBackup.allowedGoogleAccounts contains an invalid address"
+}
 
 require(normalizedAllowedGoogleAccounts.size == normalizedAllowedGoogleAccounts.toSet().size) {
     "vijiBackup.allowedGoogleAccounts must not contain duplicate addresses"
+}
+
+val validatePublicReleasePrivacy by tasks.registering(ValidatePublicReleasePrivacy::class) {
+    group = "verification"
+    description = "Prevents private identifiers from entering a public release artifact."
+    containsPrivateConfiguration.set(
+        normalizedAllowedGoogleAccounts.isNotEmpty() || driveUploadFolderId.isNotEmpty(),
+    )
+}
+
+tasks.matching { task -> task.name == "prePublicReleaseBuild" }.configureEach {
+    dependsOn(validatePublicReleasePrivacy)
 }
 
 android {
