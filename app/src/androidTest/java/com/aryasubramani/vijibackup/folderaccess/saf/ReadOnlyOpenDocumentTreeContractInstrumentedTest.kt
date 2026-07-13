@@ -67,13 +67,13 @@ class ReadOnlyOpenDocumentTreeContractInstrumentedTest {
     }
 
     @Test
-    fun parseResultDistinguishesCancellationFromMalformedSuccess() {
+    fun parseResultMapsCancellationAndMissingUriToCancellation() {
         assertEquals(
             FolderPickerResult.Cancelled,
             contract.parseResult(Activity.RESULT_CANCELED, null),
         )
         assertEquals(
-            FolderPickerResult.InvalidResult,
+            FolderPickerResult.Cancelled,
             contract.parseResult(Activity.RESULT_OK, Intent()),
         )
     }
