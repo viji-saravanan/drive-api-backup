@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-implementation-roadmap
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: roadmap
 read_when:
   - The agent needs sequencing, milestones, or implementation gates.
@@ -121,8 +121,13 @@ Exit gate:
 
 ## Phase 3: Local Folder Selection
 
+Status: implementation started on `feature/phase-3-local-folder-selection` from
+the Phase 2 base. The adversarially reviewed execution contract is
+[[Drive Backup App Phase 3 Local Folder Access Implementation Plan]].
+
 Load:
 
+- [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
 - [[Drive Backup App Product Requirements]]
 - [[Drive Backup App Architecture]]
 - [[Drive Backup App Source Register]]
