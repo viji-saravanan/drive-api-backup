@@ -17,6 +17,9 @@ abstract class FolderAccessDao {
     )
     abstract fun observeMappings(): Flow<List<LocalFolderMappingEntity>>
 
+    @Query("SELECT * FROM local_folder_mappings")
+    abstract suspend fun allMappings(): List<LocalFolderMappingEntity>
+
     @Query("SELECT * FROM local_folder_mappings WHERE id = :mappingId LIMIT 1")
     abstract suspend fun mappingById(mappingId: String): LocalFolderMappingEntity?
 
@@ -57,6 +60,39 @@ abstract class FolderAccessDao {
         requestToken: String,
         selectedTreeUri: String,
     ): Int
+
+    @Query(
+        """
+        UPDATE pending_folder_operations
+        SET state = 'ABANDONING'
+        WHERE slot = 1
+          AND request_token = :requestToken
+          AND state = 'SELECTION_RECEIVED'
+        """,
+    )
+    abstract suspend fun markPendingAbandoning(requestToken: String): Int
+
+    @Transaction
+    open suspend fun commitAddedMapping(
+        mapping: LocalFolderMappingEntity,
+        requestToken: String,
+    ): Boolean {
+        val pending = pendingOperation()
+        if (
+            pending?.requestToken != requestToken ||
+            pending.state != PendingFolderOperationState.SelectionReceived ||
+            pending.operation != PendingFolderOperationType.Add ||
+            pending.selectedTreeUri != mapping.treeUri
+        ) {
+            return false
+        }
+
+        insertMapping(mapping)
+        check(clearPendingOperation(requestToken) == 1) {
+            "Pending folder operation changed during add transaction"
+        }
+        return true
+    }
 
     @Query(
         """
