@@ -41,6 +41,8 @@ class FolderAccessViewModelTest {
         }
         val viewModel = FolderAccessViewModel(repository)
 
+        assertEquals(0, repository.observeCalls)
+        viewModel.activate()
         runCurrent()
 
         assertEquals(
@@ -59,6 +61,7 @@ class FolderAccessViewModelTest {
         }
         val viewModel = FolderAccessViewModel(repository)
 
+        viewModel.activate()
         advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.value.isLoading)
@@ -77,6 +80,7 @@ class FolderAccessViewModelTest {
             this.beginGate = beginGate
         }
         val viewModel = FolderAccessViewModel(repository)
+        viewModel.activate()
         runCurrent()
 
         viewModel.addFolder()
@@ -93,6 +97,7 @@ class FolderAccessViewModelTest {
     fun beginOutcomesHaveDistinctNoticesAndRepairForwardsMappingId() = runTest {
         val repository = FakeFolderMappingRepository()
         val viewModel = FolderAccessViewModel(repository)
+        viewModel.activate()
         runCurrent()
 
         val addCases = listOf(
@@ -169,6 +174,45 @@ class FolderAccessViewModelTest {
         assertTrue(cancellation != null)
         assertNull(viewModel.uiState.value.notice)
     }
+
+    @Test
+    fun inactiveViewModelDoesNotObserveOrBeginNewFolderWork() = runTest {
+        val repository = FakeFolderMappingRepository().apply {
+            beginAddResult = BeginFolderPickerResult.Started(
+                FolderPickerLaunch("request-a", null),
+            )
+            beginRepairResult = BeginFolderPickerResult.Started(
+                FolderPickerLaunch("request-b", null),
+            )
+        }
+        val viewModel = FolderAccessViewModel(repository)
+
+        viewModel.addFolder()
+        viewModel.repairFolder("mapping-a")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.observeCalls)
+        assertEquals(0, repository.beginAddCalls)
+        assertTrue(repository.repairCalls.isEmpty())
+    }
+
+    @Test
+    fun activationIsIdempotentAndDeactivationBlocksFurtherActions() = runTest {
+        val repository = FakeFolderMappingRepository()
+        val viewModel = FolderAccessViewModel(repository)
+
+        viewModel.activate()
+        viewModel.activate()
+        runCurrent()
+        assertEquals(1, repository.observeCalls)
+
+        viewModel.deactivate()
+        repository.beginAddResult = BeginFolderPickerResult.StorageFailure
+        viewModel.addFolder()
+        advanceUntilIdle()
+
+        assertEquals(0, repository.beginAddCalls)
+    }
 }
 
 private class FakeFolderMappingRepository : FolderMappingRepository {
@@ -179,13 +223,17 @@ private class FakeFolderMappingRepository : FolderMappingRepository {
     var completionResult: FolderPickerCompletion = FolderPickerCompletion.StorageFailure
     var completionFailure: Throwable? = null
     var beginGate: CompletableDeferred<Unit>? = null
+    var observeCalls = 0
     var beginAddCalls = 0
     val repairCalls = mutableListOf<String>()
     val completionCalls = mutableListOf<Pair<String, FolderPickerSelection>>()
 
-    override fun observeMappings(): Flow<List<FolderMapping>> = observationFailure?.let { error ->
-        flow { throw error }
-    } ?: mappings
+    override fun observeMappings(): Flow<List<FolderMapping>> {
+        observeCalls += 1
+        return observationFailure?.let { error ->
+            flow { throw error }
+        } ?: mappings
+    }
 
     override suspend fun beginAdd(): BeginFolderPickerResult {
         beginAddCalls += 1
