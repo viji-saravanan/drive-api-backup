@@ -171,6 +171,98 @@ class RoomFolderMappingRepositoryInstrumentedTest {
     }
 
     @Test
+    fun removeKeepsMappingWhenGrantRevocationCannotBeVerified() = runTest {
+        val treeUri = "content://provider.test/tree/revocation-failure"
+        database.folderAccessDao().insertMapping(mapping("existing-mapping", treeUri))
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseResult = GrantReleaseResult.Failed
+
+        assertEquals(RemoveFolderResult.GrantFailure, repository.remove("existing-mapping"))
+
+        assertEquals(
+            treeUri,
+            database.folderAccessDao().mappingById("existing-mapping")?.treeUri,
+        )
+        assertEquals(listOf(treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun removeWaitsForPendingFolderSelectionWithoutChangingMappingOrGrant() = runTest {
+        val treeUri = "content://provider.test/tree/pending-removal"
+        database.folderAccessDao().insertMapping(mapping("existing-mapping", treeUri))
+        grants.persisted = listOf(readGrant(treeUri))
+        insertPending(operation = PendingFolderOperationType.Add)
+
+        assertEquals(RemoveFolderResult.Busy, repository.remove("existing-mapping"))
+
+        assertEquals(
+            treeUri,
+            database.folderAccessDao().mappingById("existing-mapping")?.treeUri,
+        )
+        assertEquals("pending-token", database.folderAccessDao().pendingOperation()?.requestToken)
+        assertTrue(grants.releaseCalls.isEmpty())
+    }
+
+    @Test
+    fun removeReportsMissingMappingWithoutTouchingAnyGrant() = runTest {
+        assertEquals(RemoveFolderResult.MappingNotFound, repository.remove("missing-mapping"))
+
+        assertTrue(grants.releaseCalls.isEmpty())
+        assertTrue(database.folderAccessDao().allMappings().isEmpty())
+    }
+
+    @Test
+    fun removePropagatesCancellationAndKeepsMappingRetryable() = runTest {
+        val treeUri = "content://provider.test/tree/cancel-removal"
+        database.folderAccessDao().insertMapping(mapping("existing-mapping", treeUri))
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseFailure = CancellationException("test cancellation")
+        var cancellation: CancellationException? = null
+
+        try {
+            repository.remove("existing-mapping")
+        } catch (error: CancellationException) {
+            cancellation = error
+        }
+
+        assertTrue("Expected removal cancellation", cancellation != null)
+        assertEquals(
+            treeUri,
+            database.folderAccessDao().mappingById("existing-mapping")?.treeUri,
+        )
+        assertEquals(listOf(treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun removeRetriesIdempotentGrantReleaseAfterDatabaseDeleteFailure() = runTest {
+        val treeUri = "content://provider.test/tree/delete-failure"
+        database.folderAccessDao().insertMapping(mapping("existing-mapping", treeUri))
+        grants.persisted = listOf(readGrant(treeUri))
+        database.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_mapping_delete
+            BEFORE DELETE ON local_folder_mappings
+            BEGIN
+                SELECT RAISE(FAIL, 'test delete failure');
+            END
+            """.trimIndent(),
+        )
+
+        assertEquals(RemoveFolderResult.StorageFailure, repository.remove("existing-mapping"))
+        assertEquals(
+            treeUri,
+            database.folderAccessDao().mappingById("existing-mapping")?.treeUri,
+        )
+        assertEquals(listOf(treeUri), grants.releaseCalls)
+
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_mapping_delete")
+
+        assertEquals(RemoveFolderResult.Removed, repository.remove("existing-mapping"))
+        assertNull(database.folderAccessDao().mappingById("existing-mapping"))
+        assertEquals(listOf(treeUri, treeUri), grants.releaseCalls)
+    }
+
+    @Test
     fun initializationBackfillsExistingFolderNameWithoutReselection() = runTest {
         val treeUri = "content://provider.test/tree/existing"
         database.folderAccessDao().insertMapping(
