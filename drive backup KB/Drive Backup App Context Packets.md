@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-context-packets
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: machine-friendly-context-manifest
 read_when:
   - A future AI agent needs exact note sets for a feature area.
@@ -215,6 +215,7 @@ Trigger phrases:
 
 Required notes:
 
+- [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
 - [[Drive Backup App Architecture]]
 - [[Drive Backup App Product Requirements]]
 - [[Drive Backup App Failure Matrix]]
@@ -224,10 +225,13 @@ Required notes:
 Must verify:
 
 - Android Storage Access Framework docs.
+- Current Room, KSP, Activity Result, and DocumentsContract behavior named in the Phase 3 plan.
 
 Exit checks:
 
 - User can only choose folders Android permits.
+- Only a read grant is persisted; no broad storage permission is requested.
+- A selected tree scans after a real force-stop and relaunch without reopening the picker.
 - Revoked folder permission pauses that folder only.
 - App does not claim access to blocked folders.
 
