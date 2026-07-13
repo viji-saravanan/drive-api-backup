@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 data class FolderAccessUiState(
     val mappings: List<FolderMapping> = emptyList(),
     val isLoading: Boolean = true,
+    val removingMappingId: String? = null,
     val notice: FolderAccessNotice? = null,
 )
 
@@ -31,11 +32,13 @@ enum class FolderAccessNotice {
     MappingMissing,
     FolderAdded,
     FolderRepaired,
+    FolderRemoved,
     SelectionExpired,
     InvalidSelection,
     ReadPermissionMissing,
     DuplicateFolder,
     GrantFailure,
+    RemovalGrantFailure,
     StorageFailure,
     CleanupIncomplete,
 }
@@ -74,6 +77,8 @@ class FolderAccessViewModel(
     fun repairFolder(mappingId: String) {
         beginPicker { repository.beginRepair(mappingId) }
     }
+
+    fun removeFolder(mappingId: String) = Unit
 
     suspend fun completePicker(
         requestToken: String,

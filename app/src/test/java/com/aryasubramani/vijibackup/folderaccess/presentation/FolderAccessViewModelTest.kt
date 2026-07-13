@@ -122,6 +122,31 @@ class FolderAccessViewModelTest {
     }
 
     @Test
+    fun removeForwardsOneMappingAndExposesProgressUntilSuccessfulCompletion() = runTest {
+        val removeGate = CompletableDeferred<Unit>()
+        val repository = FakeFolderMappingRepository().apply {
+            removeResult = RemoveFolderResult.Removed
+            this.removeGate = removeGate
+        }
+        val viewModel = FolderAccessViewModel(repository)
+        viewModel.activate()
+        runCurrent()
+
+        viewModel.removeFolder("mapping-a")
+        viewModel.removeFolder("mapping-b")
+        runCurrent()
+
+        assertEquals(listOf("mapping-a"), repository.removeCalls)
+        assertEquals("mapping-a", viewModel.uiState.value.removingMappingId)
+
+        removeGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.removingMappingId)
+        assertEquals(FolderAccessNotice.FolderRemoved, viewModel.uiState.value.notice)
+    }
+
+    @Test
     fun everyPickerCompletionHasAnExplicitNoticeAndForwardsExactSelection() = runTest {
         val repository = FakeFolderMappingRepository()
         val viewModel = FolderAccessViewModel(repository)
@@ -223,11 +248,15 @@ private class FakeFolderMappingRepository : FolderMappingRepository {
     var beginRepairResult: BeginFolderPickerResult = BeginFolderPickerResult.StorageFailure
     var completionResult: FolderPickerCompletion = FolderPickerCompletion.StorageFailure
     var completionFailure: Throwable? = null
+    var removeResult: RemoveFolderResult = RemoveFolderResult.StorageFailure
+    var removeFailure: Throwable? = null
     var beginGate: CompletableDeferred<Unit>? = null
+    var removeGate: CompletableDeferred<Unit>? = null
     var observeCalls = 0
     var beginAddCalls = 0
     val repairCalls = mutableListOf<String>()
     val completionCalls = mutableListOf<Pair<String, FolderPickerSelection>>()
+    val removeCalls = mutableListOf<String>()
 
     override fun observeMappings(): Flow<List<FolderMapping>> {
         observeCalls += 1
@@ -256,6 +285,10 @@ private class FakeFolderMappingRepository : FolderMappingRepository {
         return completionResult
     }
 
-    override suspend fun remove(mappingId: String): RemoveFolderResult =
-        RemoveFolderResult.StorageFailure
+    override suspend fun remove(mappingId: String): RemoveFolderResult {
+        removeCalls += mappingId
+        removeGate?.await()
+        removeFailure?.let { throw it }
+        return removeResult
+    }
 }

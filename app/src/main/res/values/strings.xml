@@ -39,11 +39,13 @@
     <string name="folder_access_notice_mapping_missing">That folder entry is no longer available.</string>
     <string name="folder_access_notice_added">Folder added.</string>
     <string name="folder_access_notice_repaired">Folder access repaired.</string>
+    <string name="folder_access_notice_removed">Folder removed.</string>
     <string name="folder_access_notice_expired">The folder selection expired. Try again.</string>
     <string name="folder_access_notice_invalid">Choose a folder from the system picker.</string>
     <string name="folder_access_notice_read_missing">Read access was not granted.</string>
     <string name="folder_access_notice_duplicate">That folder is already included.</string>
     <string name="folder_access_notice_grant_failure">Folder access could not be saved.</string>
+    <string name="folder_access_notice_removal_grant_failure">Folder access could not be removed. Try again.</string>
     <string name="folder_access_notice_storage_failure">Folder settings are temporarily unavailable.</string>
     <string name="folder_access_notice_cleanup">Folder access cleanup will be retried.</string>
 </resources>

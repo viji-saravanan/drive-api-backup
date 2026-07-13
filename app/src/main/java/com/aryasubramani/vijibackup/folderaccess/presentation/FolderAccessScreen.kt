@@ -160,11 +160,14 @@ private fun FolderAccessNotice.messageResource(): Int = when (this) {
     FolderAccessNotice.MappingMissing -> R.string.folder_access_notice_mapping_missing
     FolderAccessNotice.FolderAdded -> R.string.folder_access_notice_added
     FolderAccessNotice.FolderRepaired -> R.string.folder_access_notice_repaired
+    FolderAccessNotice.FolderRemoved -> R.string.folder_access_notice_removed
     FolderAccessNotice.SelectionExpired -> R.string.folder_access_notice_expired
     FolderAccessNotice.InvalidSelection -> R.string.folder_access_notice_invalid
     FolderAccessNotice.ReadPermissionMissing -> R.string.folder_access_notice_read_missing
     FolderAccessNotice.DuplicateFolder -> R.string.folder_access_notice_duplicate
     FolderAccessNotice.GrantFailure -> R.string.folder_access_notice_grant_failure
+    FolderAccessNotice.RemovalGrantFailure ->
+        R.string.folder_access_notice_removal_grant_failure
     FolderAccessNotice.StorageFailure -> R.string.folder_access_notice_storage_failure
     FolderAccessNotice.CleanupIncomplete -> R.string.folder_access_notice_cleanup
 }
