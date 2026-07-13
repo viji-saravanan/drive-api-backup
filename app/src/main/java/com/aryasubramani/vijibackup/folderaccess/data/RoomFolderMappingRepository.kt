@@ -15,6 +15,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerLaunch
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
 import com.aryasubramani.vijibackup.folderaccess.domain.LocalFolderMetadataReader
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.saf.AcquireReadGrantResult
 import com.aryasubramani.vijibackup.folderaccess.saf.GrantReleaseResult
 import com.aryasubramani.vijibackup.folderaccess.saf.LocalFolderGrantManager
@@ -102,6 +103,26 @@ class RoomFolderMappingRepository(
                     }
                 }
                 is FolderPickerSelection.Selected -> completeSelection(pending, selection)
+            }
+        }
+    }
+
+    override suspend fun remove(mappingId: String): RemoveFolderResult = storageResult(
+        failure = RemoveFolderResult.StorageFailure,
+    ) {
+        serialized {
+            if (dao.pendingOperation() != null) {
+                return@serialized RemoveFolderResult.Busy
+            }
+            val mapping = dao.mappingById(mappingId)
+                ?: return@serialized RemoveFolderResult.MappingNotFound
+            if (grantManager.releaseGrant(mapping.treeUri) != GrantReleaseResult.Released) {
+                return@serialized RemoveFolderResult.GrantFailure
+            }
+            if (dao.deleteMapping(mapping.id) == 1) {
+                RemoveFolderResult.Removed
+            } else {
+                RemoveFolderResult.StorageFailure
             }
         }
     }

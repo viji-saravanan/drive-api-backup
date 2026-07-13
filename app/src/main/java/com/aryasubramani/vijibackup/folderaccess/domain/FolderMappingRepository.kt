@@ -59,6 +59,5 @@ interface FolderMappingRepository {
         selection: FolderPickerSelection,
     ): FolderPickerCompletion
 
-    suspend fun remove(mappingId: String): RemoveFolderResult =
-        RemoveFolderResult.StorageFailure
+    suspend fun remove(mappingId: String): RemoveFolderResult
 }

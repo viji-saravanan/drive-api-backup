@@ -28,6 +28,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessTestTags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -179,6 +180,9 @@ private class EmptyFolderMappingRepository : FolderMappingRepository {
         requestToken: String,
         selection: FolderPickerSelection,
     ): FolderPickerCompletion = FolderPickerCompletion.StorageFailure
+
+    override suspend fun remove(mappingId: String): RemoveFolderResult =
+        RemoveFolderResult.StorageFailure
 }
 
 private class InMemoryAuthSessionStore : AuthSessionStore {

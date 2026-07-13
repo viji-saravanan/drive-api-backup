@@ -7,6 +7,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerLaunch
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -254,4 +255,7 @@ private class FakeFolderMappingRepository : FolderMappingRepository {
         completionFailure?.let { throw it }
         return completionResult
     }
+
+    override suspend fun remove(mappingId: String): RemoveFolderResult =
+        RemoveFolderResult.StorageFailure
 }
