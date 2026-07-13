@@ -23,6 +23,13 @@ import com.aryasubramani.vijibackup.auth.google.GoogleSignInClient
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInMode
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInResult
 import com.aryasubramani.vijibackup.auth.presentation.AuthTestTags
+import com.aryasubramani.vijibackup.folderaccess.domain.BeginFolderPickerResult
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -47,6 +54,10 @@ class AppCompositionInstrumentedTest {
         assertSame(
             application.appContainer.googleSignInClient,
             application.appContainer.googleSignInClient,
+        )
+        assertSame(
+            application.appContainer.folderMappingRepository,
+            application.appContainer.folderMappingRepository,
         )
     }
 
@@ -100,6 +111,7 @@ class AppCompositionInstrumentedTest {
                 signInModes += mode
                 GoogleSignInResult.Success(account)
             }
+            override val folderMappingRepository = EmptyFolderMappingRepository()
             override val isGoogleSignInConfigured = true
         }
         application.testAppContainer = fakeContainer
@@ -139,6 +151,21 @@ class AppCompositionInstrumentedTest {
             application.testAppContainer = null
         }
     }
+}
+
+private class EmptyFolderMappingRepository : FolderMappingRepository {
+    override fun observeMappings(): Flow<List<FolderMapping>> = flowOf(emptyList())
+
+    override suspend fun beginAdd(): BeginFolderPickerResult =
+        BeginFolderPickerResult.StorageFailure
+
+    override suspend fun beginRepair(mappingId: String): BeginFolderPickerResult =
+        BeginFolderPickerResult.StorageFailure
+
+    override suspend fun completePicker(
+        requestToken: String,
+        selection: FolderPickerSelection,
+    ): FolderPickerCompletion = FolderPickerCompletion.StorageFailure
 }
 
 private class InMemoryAuthSessionStore : AuthSessionStore {
