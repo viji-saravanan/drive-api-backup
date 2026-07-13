@@ -9,6 +9,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerLaunch
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -49,6 +50,7 @@ class FolderAccessViewModel(
     private val mutableUiState = MutableStateFlow(FolderAccessUiState())
     private val pickerLaunchChannel = Channel<FolderPickerLaunch>(Channel.BUFFERED)
     private var beginOperation: Job? = null
+    private var removeOperation: Job? = null
     private var mappingObservation: Job? = null
     private var isActive = false
 
@@ -66,6 +68,8 @@ class FolderAccessViewModel(
         isActive = false
         beginOperation?.cancel()
         beginOperation = null
+        removeOperation?.cancel()
+        removeOperation = null
         mappingObservation?.cancel()
         mappingObservation = null
     }
@@ -78,7 +82,36 @@ class FolderAccessViewModel(
         beginPicker { repository.beginRepair(mappingId) }
     }
 
-    fun removeFolder(mappingId: String) = Unit
+    fun removeFolder(mappingId: String) {
+        if (
+            !isActive ||
+            beginOperation?.isActive == true ||
+            removeOperation?.isActive == true
+        ) {
+            return
+        }
+        removeOperation = viewModelScope.launch {
+            mutableUiState.update { state ->
+                state.copy(
+                    removingMappingId = mappingId,
+                    notice = null,
+                )
+            }
+            try {
+                val result = try {
+                    repository.remove(mappingId)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    RemoveFolderResult.StorageFailure
+                }
+                mutableUiState.update { state -> state.copy(notice = result.notice()) }
+            } finally {
+                mutableUiState.update { state -> state.copy(removingMappingId = null) }
+                removeOperation = null
+            }
+        }
+    }
 
     suspend fun completePicker(
         requestToken: String,
@@ -102,7 +135,13 @@ class FolderAccessViewModel(
     }
 
     private fun beginPicker(operation: suspend () -> BeginFolderPickerResult) {
-        if (!isActive || beginOperation?.isActive == true) return
+        if (
+            !isActive ||
+            beginOperation?.isActive == true ||
+            removeOperation?.isActive == true
+        ) {
+            return
+        }
         beginOperation = viewModelScope.launch {
             val result = try {
                 operation()
@@ -163,6 +202,14 @@ class FolderAccessViewModel(
         FolderPickerCompletion.GrantFailure -> FolderAccessNotice.GrantFailure
         FolderPickerCompletion.StorageFailure -> FolderAccessNotice.StorageFailure
         FolderPickerCompletion.CleanupIncomplete -> FolderAccessNotice.CleanupIncomplete
+    }
+
+    private fun RemoveFolderResult.notice(): FolderAccessNotice = when (this) {
+        RemoveFolderResult.Removed -> FolderAccessNotice.FolderRemoved
+        RemoveFolderResult.MappingNotFound -> FolderAccessNotice.MappingMissing
+        RemoveFolderResult.Busy -> FolderAccessNotice.PickerBusy
+        RemoveFolderResult.GrantFailure -> FolderAccessNotice.RemovalGrantFailure
+        RemoveFolderResult.StorageFailure -> FolderAccessNotice.StorageFailure
     }
 
     class Factory(
