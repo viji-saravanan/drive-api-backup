@@ -46,12 +46,25 @@ class FolderAccessViewModel(
     private val mutableUiState = MutableStateFlow(FolderAccessUiState())
     private val pickerLaunchChannel = Channel<FolderPickerLaunch>(Channel.BUFFERED)
     private var beginOperation: Job? = null
+    private var mappingObservation: Job? = null
+    private var isActive = false
 
     val uiState: StateFlow<FolderAccessUiState> = mutableUiState.asStateFlow()
     val pickerLaunches: Flow<FolderPickerLaunch> = pickerLaunchChannel.receiveAsFlow()
 
-    init {
-        observeMappings()
+    fun activate() {
+        isActive = true
+        if (mappingObservation?.isActive == true) return
+        mutableUiState.update { state -> state.copy(isLoading = true) }
+        mappingObservation = observeMappings()
+    }
+
+    fun deactivate() {
+        isActive = false
+        beginOperation?.cancel()
+        beginOperation = null
+        mappingObservation?.cancel()
+        mappingObservation = null
     }
 
     fun addFolder() {
@@ -84,7 +97,7 @@ class FolderAccessViewModel(
     }
 
     private fun beginPicker(operation: suspend () -> BeginFolderPickerResult) {
-        if (beginOperation?.isActive == true) return
+        if (!isActive || beginOperation?.isActive == true) return
         beginOperation = viewModelScope.launch {
             val result = try {
                 operation()
@@ -108,26 +121,24 @@ class FolderAccessViewModel(
         }
     }
 
-    private fun observeMappings() {
-        viewModelScope.launch {
-            try {
-                repository.observeMappings().collect { mappings ->
-                    mutableUiState.update { state ->
-                        state.copy(
-                            mappings = mappings,
-                            isLoading = false,
-                        )
-                    }
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
+    private fun observeMappings(): Job = viewModelScope.launch {
+        try {
+            repository.observeMappings().collect { mappings ->
                 mutableUiState.update { state ->
                     state.copy(
+                        mappings = mappings,
                         isLoading = false,
-                        notice = FolderAccessNotice.StorageFailure,
                     )
                 }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            mutableUiState.update { state ->
+                state.copy(
+                    isLoading = false,
+                    notice = FolderAccessNotice.StorageFailure,
+                )
             }
         }
     }
