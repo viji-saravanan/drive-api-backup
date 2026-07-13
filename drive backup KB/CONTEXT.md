@@ -1,3 +1,14 @@
+---
+doc_id: drive-backup-app-context-language
+status: active
+last_updated: 2026-07-13
+context_role: canonical-language
+read_when:
+  - The agent is naming domain types, UI states, tests, reports, or diagnostics.
+do_not_read_when:
+  - The task uses already-defined terms without introducing or changing language.
+---
+
 # Drive Backup App
 
 This context defines the core language for the personal Android folder backup app. Use these terms consistently in requirements, implementation plans, tests, and diagnostics.
@@ -23,6 +34,14 @@ _Avoid_: whitelist, customer list, access table
 **Folder Mapping**:
 A configured relationship between one Android local folder and one Drive destination folder.
 _Avoid_: sync pair, mount, binding
+
+**Folder Access Health**:
+The current result of checking a mapping's persisted read grant and live root query.
+_Avoid_: permission flag, cached validity
+
+**Metadata Scan**:
+A read-only traversal that counts documents and directories and reports access failures without uploading files or changing source content.
+_Avoid_: sync, backup run, file indexing
 
 **Drive Destination**:
 The Google Drive folder where a folder mapping uploads its backup files.
