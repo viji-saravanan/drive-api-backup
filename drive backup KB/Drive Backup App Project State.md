@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -32,6 +32,12 @@ Phase 1 foundation work is under review in PR #1. Phase 2 authentication work is
 published as draft PR #2 from `feature/phase-2-auth-allowlist`, stacked on
 `setup/phase-1-foundation`.
 
+Phase 3 local folder access is active on
+`feature/phase-3-local-folder-selection`, stacked on the Phase 2 branch. Its
+implementation packet, architecture, failure matrix, security rules, source
+register, and physical-device acceptance matrix are committed. Production code
+has not yet been added on this branch.
+
 Implemented Phase 2 slices:
 
 - exact normalized account policy;
@@ -51,9 +57,12 @@ Implemented Phase 2 slices:
 - zero-secret GitHub source verification for unit, build, Android-test APK, and lint tasks;
 - fresh-laptop setup and repeatable test runbook.
 
-Not yet implemented:
+Not yet implemented on the current Phase 3 branch:
 
-- Google Drive authorization or folder access;
+- Storage Access Framework folder selection and persisted read grants;
+- Room-backed folder mappings and pending picker recovery;
+- folder validation, metadata scan, cancellation, repair, and removal UI;
+- Google Drive authorization or destination access;
 - any selected-folder sync behavior;
 - release signing or APK publication.
 
@@ -96,7 +105,8 @@ Email notification defaults:
 
 ## Current Gaps And Boundaries
 
-- Active development branch is `feature/phase-2-auth-allowlist`.
+- Active development branch is `feature/phase-3-local-folder-selection`, based
+  on `feature/phase-2-auth-allowlist`.
 - PR #2 is intentionally draft and must not merge before PR #1.
 - Git account switcher profiles are verified for `callmearya` and
   `viji-saravanan`; both commit with their GitHub-provided `noreply` identity.
@@ -109,9 +119,9 @@ Email notification defaults:
 - Email-address allowlisting retains a subject-reassignment residual. Move to
   opaque Google subjects or a trusted verifier before claiming strong public
   authorization.
-- The source/review repository must remain private because immutable historical
-  review excerpts retain old private configuration. Create any future public
-  source repository fresh from sanitized release commits.
+- The source repository is public. Privacy cleanup and tracked-history review
+  preceded publication; every new commit, branch, workflow log, PR comment, and
+  artifact must now be treated as permanently public.
 - GitHub source CI intentionally receives no private values and must never upload
   privately configured debug APKs as artifacts.
 - `validatePublicReleasePrivacy` blocks `publicRelease` whenever the email
@@ -141,7 +151,7 @@ Connected wired-ADB target:
 - Google Play services `26.24.34`;
 - device serial and account addresses intentionally excluded from evidence.
 
-Observed on 2026-07-11 and reverified on 2026-07-12:
+Observed on 2026-07-11, with the ADB connection reverified on 2026-07-13:
 
 - internal flavor: 28 instrumented tests, 0 failures, 0 errors;
 - public flavor: 28 instrumented tests, 0 failures, 0 errors;
@@ -183,16 +193,20 @@ proving a clean checkout reaches the intended fail-closed setup state.
 
 ## Immediate Goal
 
-Complete Phase 2 review and stacked-PR integration without claiming the local
-allowlist is public-release security.
+Implement Phase 3 read-only local folder access without weakening Phase 2 auth
+or claiming that Android's local-only picker hint proves physical locality.
 
 Next sequence:
 
-- keep PR #2 stacked on PR #1 until the foundation base is integrated;
-- preserve the source repository as private and keep private APKs out of CI artifacts;
-- capture the remaining release-only manual auth cases before distributing an APK;
-- begin Phase 3 local folder selection from the integrated Phase 2 base;
-- require current Google/Drive authorization at every future protected sync boundary.
+- push the Phase 3 branch and open its draft PR against the Phase 2 branch;
+- add Room and picker state using red-green vertical slices;
+- implement read-only selection, validation, scan, cancellation, repair, and
+  removal without mutating source content;
+- run the full automated regression and every physical Samsung
+  `FOLDER-LIVE-*` acceptance case;
+- keep configured APKs and raw live evidence out of public CI and Git;
+- defer real Drive authorization and upload acceptance to Phase 4, where the
+  current Google account and shared-folder ACL must be checked.
 
 ## Next Notes
 
@@ -202,3 +216,4 @@ Next sequence:
 - [[Drive Backup App Testing Plan]]
 - [[Drive Backup App Context Packets]]
 - [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
+- [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
