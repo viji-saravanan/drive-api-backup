@@ -119,6 +119,61 @@ class FolderAccessScreenInstrumentedTest {
     }
 
     @Test
+    fun cancellingRemovalUsesFallbackNameAndHasNoSideEffect() {
+        val removed = mutableListOf<String>()
+        val mapping = FolderMapping(
+            id = "mapping-a",
+            displayName = null,
+            enabled = true,
+        )
+        composeRule.setFolderContent(
+            state = FolderAccessUiState(
+                mappings = listOf(mapping),
+                isLoading = false,
+            ),
+            onRemoveFolder = removed::add,
+        )
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.removeButton(mapping.id)).performClick()
+        composeRule.onNodeWithText(
+            appString(
+                R.string.folder_access_remove_dialog_title,
+                appString(R.string.folder_access_fallback_name, 1),
+            ),
+        ).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.CancelRemove).performClick()
+
+        composeRule.onAllNodesWithTag(FolderAccessTestTags.RemoveDialog).assertCountEquals(0)
+        assertTrue(removed.isEmpty())
+    }
+
+    @Test
+    fun activeRemovalDisablesEveryCompetingFolderActionAndShowsProgress() {
+        val mappings = listOf(
+            FolderMapping(id = "mapping-a", displayName = "Camera", enabled = true),
+            FolderMapping(id = "mapping-b", displayName = "Pictures", enabled = true),
+        )
+        composeRule.setFolderContent(
+            state = FolderAccessUiState(
+                mappings = mappings,
+                isLoading = false,
+                removingMappingId = "mapping-a",
+            ),
+        )
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.AddButton).assertIsNotEnabled()
+        mappings.forEach { mapping ->
+            composeRule.onNodeWithTag(FolderAccessTestTags.repairButton(mapping.id))
+                .assertIsNotEnabled()
+            composeRule.onNodeWithTag(FolderAccessTestTags.removeButton(mapping.id))
+                .assertIsNotEnabled()
+        }
+        composeRule.onNodeWithText(appString(R.string.folder_access_removing))
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun everyOperationNoticeHasSpecificNonSensitiveText() {
         val state = mutableStateOf(
             FolderAccessUiState(isLoading = false, notice = FolderAccessNotice.PickerBusy),
