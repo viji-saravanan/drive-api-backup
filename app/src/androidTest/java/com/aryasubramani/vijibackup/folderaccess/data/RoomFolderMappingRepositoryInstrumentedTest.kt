@@ -14,6 +14,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.BeginFolderPickerResult
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
 import com.aryasubramani.vijibackup.folderaccess.domain.LocalFolderMetadataReader
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.saf.AcquireReadGrantResult
 import com.aryasubramani.vijibackup.folderaccess.saf.GrantReleaseResult
 import com.aryasubramani.vijibackup.folderaccess.saf.LocalFolderGrantManager
@@ -149,6 +150,24 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         assertEquals(treeUri, mapping.treeUri)
         assertEquals("Selected folder", mapping.sourceDisplayName)
         assertTrue(mapping.enabled)
+    }
+
+    @Test
+    fun removeRevokesOnlyTheSelectedFolderGrantAndDeletesOnlyItsMapping() = runTest {
+        val removedTreeUri = "content://provider.test/tree/remove"
+        val retainedTreeUri = "content://provider.test/tree/retain"
+        database.folderAccessDao().insertMapping(mapping("remove-mapping", removedTreeUri))
+        database.folderAccessDao().insertMapping(mapping("retain-mapping", retainedTreeUri))
+        grants.persisted = listOf(readGrant(removedTreeUri), readGrant(retainedTreeUri))
+
+        assertEquals(RemoveFolderResult.Removed, repository.remove("remove-mapping"))
+
+        assertNull(database.folderAccessDao().mappingById("remove-mapping"))
+        assertEquals(
+            retainedTreeUri,
+            database.folderAccessDao().mappingById("retain-mapping")?.treeUri,
+        )
+        assertEquals(listOf(removedTreeUri), grants.releaseCalls)
     }
 
     @Test

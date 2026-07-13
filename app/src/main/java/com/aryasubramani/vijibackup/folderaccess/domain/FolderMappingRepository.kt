@@ -42,6 +42,14 @@ sealed interface FolderPickerCompletion {
     data object CleanupIncomplete : FolderPickerCompletion
 }
 
+sealed interface RemoveFolderResult {
+    data object Removed : RemoveFolderResult
+    data object MappingNotFound : RemoveFolderResult
+    data object Busy : RemoveFolderResult
+    data object GrantFailure : RemoveFolderResult
+    data object StorageFailure : RemoveFolderResult
+}
+
 interface FolderMappingRepository {
     fun observeMappings(): Flow<List<FolderMapping>>
     suspend fun beginAdd(): BeginFolderPickerResult
@@ -50,4 +58,7 @@ interface FolderMappingRepository {
         requestToken: String,
         selection: FolderPickerSelection,
     ): FolderPickerCompletion
+
+    suspend fun remove(mappingId: String): RemoveFolderResult =
+        RemoveFolderResult.StorageFailure
 }
