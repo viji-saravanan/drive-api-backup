@@ -39,6 +39,10 @@ Do not full-send the app in one pass. Work phase by phase, and keep every phase 
 - Do not push directly to `dev` or `main`.
 - Do not add secrets, OAuth tokens, Drive credentials, SMTP credentials, or GitHub tokens to the repo.
 - Do not commit personal email addresses, Drive folder IDs, OAuth client IDs, or machine-specific absolute paths. Use `example.test` identities in tests and the ignored private configuration contract for real values.
+- Treat `.env`, `private.properties`, downloaded OAuth JSON, and any token file as
+  opaque local inputs. Never print, paste, upload, attach, or source them into
+  public CI. The project owner's ignored `.env` is a temporary credential vault,
+  not Android build configuration and not a disaster-recovery backup.
 - Use the Git account switcher before every commit and push. This project intentionally splits commit attribution between Arya personal and Viji; do not leave commits under Arya work.
 
 ## Change-Impact Discipline
