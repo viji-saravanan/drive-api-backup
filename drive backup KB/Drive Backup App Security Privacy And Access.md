@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-security-privacy-access
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: security-privacy
 read_when:
   - The agent touches auth, Drive sharing, tokens, email, encryption, or privacy.
@@ -62,6 +62,12 @@ metadata never unlocks the app by itself, and an approved process relocks when
 the app backgrounds. Future Drive work must still recheck current authorization
 before every protected operation.
 
+For the current personal-use installation, every configured approved account is
+an explicit co-administrator of local folder mappings on that installation.
+Switching between approved accounts does not create separate mapping profiles.
+This is acceptable only while all approved accounts are mutually trusted. Add
+per-profile ownership and migration before admitting unrelated users.
+
 Future version can support a remotely fetched allowlist only if:
 
 - it is signed;
@@ -77,6 +83,37 @@ Future version can support a remotely fetched allowlist only if:
 - Do not log tokens.
 - Do not include tokens in diagnostics export.
 - Wipe local auth state on sign-out.
+
+## Local Folder Access
+
+Phase 3 uses Android's Storage Access Framework and takes only the persistent
+read grant returned by the system folder picker. It must never request or retain
+a write grant, broad storage permission, all-files access, or a grant for a URI
+that is not referenced by either a completed mapping or the durable in-flight
+selection record.
+
+`Intent.EXTRA_LOCAL_ONLY` is a provider-filtering request, not proof that the
+returned tree is physically stored on the phone. Treat provider authority,
+document IDs, tree URIs, and persisted-grant metadata as opaque framework data.
+The picker UI and the user's explicit selection are the Phase 3 trust boundary.
+
+Folder mappings and in-flight selections live in the app-private Room database.
+That database is excluded from Android backup and device transfer because a
+restored URI without the matching framework grant is misleading and unsafe.
+Every add, repair, and removal path must compensate across the non-atomic Room
+and URI-grant operations, and must never delete or modify source content.
+
+Local folder labels, tree URIs, document IDs, provider authorities, and scanned
+filenames must not be written to application logs, crash messages, analytics,
+test names, screenshots, or repository evidence. Phase 3 diagnostics may use
+opaque mapping IDs and aggregate counts. The future sync report may include the
+minimal failed relative filenames requested by the product, but only in the
+user-selected email report and protected in-app history.
+
+Disable recent-task screenshots whenever protected folder content can be shown:
+use `Activity.setRecentsScreenshotEnabled(false)` on API 33 and newer and
+`FLAG_SECURE` on older supported versions. This protection is separate from
+normal foreground authentication and does not relax the relock policy.
 
 ## Email Privacy
 
@@ -130,6 +167,10 @@ If private mode is added:
 - Backups owned by unexpected Google account.
 - User believes app can access blocked Android folders.
 - Public APK accidentally built with internal diagnostics.
+- A picker provider ignores the local-only hint.
+- A stale picker callback acquires an unreferenced URI grant.
+- A restored Room mapping has no corresponding framework grant.
+- Folder labels, URIs, or filenames leak through logs or task snapshots.
 
 ## Next Notes
 
