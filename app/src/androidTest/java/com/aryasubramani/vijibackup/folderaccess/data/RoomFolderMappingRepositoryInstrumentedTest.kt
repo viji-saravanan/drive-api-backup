@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.aryasubramani.vijibackup.folderaccess.data.db.PendingFolderOperationState
 import com.aryasubramani.vijibackup.folderaccess.data.db.VijiBackupDatabase
 import com.aryasubramani.vijibackup.folderaccess.domain.BeginFolderPickerResult
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
@@ -158,19 +159,42 @@ class RoomFolderMappingRepositoryInstrumentedTest {
     }
 
     @Test
-    fun grantFailureLeavesNoMappingOrPendingOperation() = runTest {
-        grants.acquireResult = AcquireReadGrantResult.Failed
+    fun cleanGrantRejectionLeavesNoStateAndDoesNotReleaseAnUnownedGrant() = runTest {
+        grants.acquireResult = AcquireReadGrantResult.RejectedClean
         val started = repository.beginAdd() as BeginFolderPickerResult.Started
+        val treeUri = "content://provider.test/tree/unavailable"
 
         assertEquals(
             FolderPickerCompletion.GrantFailure,
             repository.completePicker(
                 started.request.requestToken,
-                selected("content://provider.test/tree/unavailable"),
+                selected(treeUri),
             ),
         )
         assertTrue(database.folderAccessDao().observeMappings().first().isEmpty())
         assertNull(database.folderAccessDao().pendingOperation())
+        assertTrue(grants.releaseCalls.isEmpty())
+    }
+
+    @Test
+    fun uncertainGrantFailureRetainsTombstoneWhenCleanupCannotBeVerified() = runTest {
+        grants.acquireResult = AcquireReadGrantResult.CleanupRequired
+        grants.releaseResult = GrantReleaseResult.Failed
+        val started = repository.beginAdd() as BeginFolderPickerResult.Started
+        val treeUri = "content://provider.test/tree/uncertain"
+
+        assertEquals(
+            FolderPickerCompletion.CleanupIncomplete,
+            repository.completePicker(
+                started.request.requestToken,
+                selected(treeUri),
+            ),
+        )
+        assertTrue(database.folderAccessDao().observeMappings().first().isEmpty())
+        val pending = requireNotNull(database.folderAccessDao().pendingOperation())
+        assertEquals(PendingFolderOperationState.Abandoning, pending.state)
+        assertEquals(treeUri, pending.selectedTreeUri)
+        assertEquals(listOf(treeUri), grants.releaseCalls)
     }
 
     private fun selected(treeUri: String) = FolderPickerSelection.Selected(
@@ -188,7 +212,9 @@ class RoomFolderMappingRepositoryInstrumentedTest {
 
 private class RecordingGrantManager : LocalFolderGrantManager {
     val acquireCalls = mutableListOf<FolderPickerSelection.Selected>()
+    val releaseCalls = mutableListOf<String>()
     var acquireResult: AcquireReadGrantResult = AcquireReadGrantResult.Acquired
+    var releaseResult: GrantReleaseResult = GrantReleaseResult.Released
 
     override suspend fun persistedGrants(): List<PersistedFolderGrant> = emptyList()
 
@@ -200,6 +226,8 @@ private class RecordingGrantManager : LocalFolderGrantManager {
         return acquireResult
     }
 
-    override suspend fun releaseGrant(treeUri: String): GrantReleaseResult =
-        GrantReleaseResult.Released
+    override suspend fun releaseGrant(treeUri: String): GrantReleaseResult {
+        releaseCalls += treeUri
+        return releaseResult
+    }
 }

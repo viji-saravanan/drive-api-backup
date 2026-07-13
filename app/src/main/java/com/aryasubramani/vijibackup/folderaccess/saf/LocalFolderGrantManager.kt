@@ -8,7 +8,8 @@ data class PersistedFolderGrant(
 
 enum class AcquireReadGrantResult {
     Acquired,
-    Failed,
+    RejectedClean,
+    CleanupRequired,
 }
 
 enum class GrantReleaseResult {
