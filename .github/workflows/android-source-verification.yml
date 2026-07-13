@@ -57,3 +57,10 @@ jobs:
           :app:lintPublicDebug
           --no-daemon
           --stacktrace
+
+      - name: Reject uncommitted Room schema changes
+        run: |
+          if [ -n "$(git status --porcelain --untracked-files=all -- app/schemas)" ]; then
+            git status --short --untracked-files=all -- app/schemas
+            exit 1
+          fi
