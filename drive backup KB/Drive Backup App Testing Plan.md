@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-testing-plan
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: testing
 read_when:
   - The agent writes, reviews, or plans tests.
@@ -31,6 +31,13 @@ For every feature, define:
 
 If the current test layer cannot cover a case, add it to the manual device matrix or recovery drill. Do not drop the case silently.
 
+No fake phone, emulator, test double, synthetic DocumentsProvider, or fake cloud
+response can be used as evidence that a physical-device, SAF, Google auth,
+Google Drive, upload, or recovery acceptance gate passed. Deterministic tests
+remain required for hostile branches that cannot be triggered safely against
+personal data, but they are supporting evidence only. Every implemented external
+boundary also needs the real physical-device/service case named by its phase.
+
 ## Test Layers
 
 ### Unit Tests
@@ -57,9 +64,10 @@ Cover pure logic:
 
 Every unit-tested state machine should include invalid transition tests, not just valid transitions.
 
-### Fake Integration Tests
+### Deterministic Integration Tests
 
-Use fake local file tree, fake Drive API, fake auth, and fake email adapter.
+Use controlled local trees, service test doubles, and instrumentation-only
+providers to force failures that must not be inflicted on personal data.
 
 Cover:
 
@@ -81,7 +89,10 @@ Cover:
 - email failure;
 - crash and resume from ledger.
 
-Fake integration tests should simulate hostile service behavior: duplicate responses, missing metadata, partial upload completion, stale Drive IDs, repeated transient errors, and permanent denial after retries.
+Deterministic integration tests should simulate hostile service behavior:
+duplicate responses, missing metadata, partial upload completion, stale Drive
+IDs, repeated transient errors, and permanent denial after retries. Passing them
+never replaces a real Drive or physical-device acceptance result.
 
 ### WorkManager Tests
 
@@ -101,10 +112,14 @@ Work tests must prove that duplicate workers do not corrupt state and that cance
 
 Cover:
 
-- Google sign-in flow with test account or fake auth where possible;
+- Credential Manager adapter mapping with controlled results plus separate live
+  approved-account sign-in on the physical device;
 - folder picker result handling;
-- persisted URI permission;
+- persisted read-only URI permission with no persisted write permission;
 - revoked URI permission;
+- picker request correlation across process/activity recreation;
+- Room mapping transaction and migration behavior;
+- iterative DocumentsContract traversal, cancellation, and cursor closure;
 - settings screen updates for frequency, mobile data, folders, charging, and email recipients;
 - notification permission denied;
 - preflight screen repair actions;
@@ -127,6 +142,9 @@ Run on at least:
 - one Pixel device or emulator;
 - one Samsung device if available.
 
+The connected Samsung physical baseline is mandatory for Phase 3 and later
+acceptance. An emulator can broaden API coverage but cannot replace it.
+
 Scenarios:
 
 - battery saver on;
@@ -140,8 +158,8 @@ Scenarios:
 - device reboot;
 - app force stop;
 - Drive folder sharing removed;
-- Google account removed from device.
-- notification permission denied or revoked.
+- Google account removed from device;
+- notification permission denied or revoked;
 - app killed while a file is uploading;
 - folder permission revoked after successful setup;
 - Drive folder access removed after successful setup;
@@ -200,6 +218,35 @@ Release-only auth cases not yet claimed as complete:
 Use [[Drive Backup App Fresh Laptop Setup And Test Runbook]] for exact setup,
 commands, debug SHA registration, evidence privacy, and branch/PR rules.
 
+## Phase 3 Local Folder Evidence Contract
+
+The implementation and exact matrix are owned by
+[[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]. Phase 3 is
+not complete until the Samsung/API 34 proves all of the following with the real
+system picker and real persisted grant:
+
+- only read permission is retained;
+- selected internal-storage data scans after force-stop/relaunch without another
+  picker interaction;
+- a real released grant becomes `PermissionMissing` while the mapping survives;
+- repair restores the same mapping and same-URI repair does not revoke it;
+- cancellation stops one scan without poisoning another mapping;
+- a moved/deleted dedicated test tree does not delete its mapping automatically;
+- one broken mapping does not stop another real mapping;
+- installation-scoped mappings remain available to another configured approved
+  identity;
+- recent-apps preview hides protected folder metadata;
+- a host-side before/after mutation-sentinel manifest proves the app did not
+  alter dedicated test content;
+- process logs and public evidence contain no raw URI, live filename, subject,
+  token, OAuth identifier, or exception payload.
+
+Impossible-to-induce branches use a controllable instrumentation-only
+DocumentsProvider through the production scanner. This is not live acceptance.
+Crash-point tests terminate and restart the test process around real Room and URI
+grant boundaries. Deferred API 24/API 30/API 36, removable-storage, reboot, and
+cross-device-transfer cases stay visible until actual evidence exists.
+
 ## Data Set Matrix
 
 Create test folders with:
@@ -222,10 +269,11 @@ Create test folders with:
 Before any public APK release:
 
 - Unit tests pass.
-- Fake integration tests pass.
+- Deterministic hostile-path integration tests pass.
 - Work scheduling tests pass.
 - Negative and edge-case tests for changed areas pass.
-- At least one full manual sync test passes on a real/emulated device.
+- At least one full manual sync test passes on a physical device using real local
+  data, the real signed-in Google account, and the real shared Drive folder.
 - Failure email includes failed filenames.
 - Source register has been checked for any platform behavior changed by the release.
 - APK is signed with the correct key.
