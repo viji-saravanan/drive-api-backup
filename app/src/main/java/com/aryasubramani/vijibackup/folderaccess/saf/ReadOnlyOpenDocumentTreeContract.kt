@@ -19,7 +19,6 @@ sealed interface FolderPickerResult {
     ) : FolderPickerResult
 
     data object Cancelled : FolderPickerResult
-    data object InvalidResult : FolderPickerResult
 }
 
 class ReadOnlyOpenDocumentTreeContract :
@@ -39,7 +38,7 @@ class ReadOnlyOpenDocumentTreeContract :
 
     override fun parseResult(resultCode: Int, intent: Intent?): FolderPickerResult {
         if (resultCode != Activity.RESULT_OK) return FolderPickerResult.Cancelled
-        val treeUri = intent?.data ?: return FolderPickerResult.InvalidResult
+        val treeUri = intent?.data ?: return FolderPickerResult.Cancelled
         return FolderPickerResult.Selected(
             treeUri = treeUri,
             grantedFlags = intent.flags and URI_GRANT_FLAGS,
