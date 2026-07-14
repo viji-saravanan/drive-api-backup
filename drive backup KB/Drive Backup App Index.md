@@ -7,7 +7,7 @@ read_when:
   - Any future AI session starts work on the Android Drive backup app.
   - The agent needs to choose which notes to load without reading the whole vault.
 do_not_read_when:
-  - Never skip this note for app-related work.
+  - Never.
 ---
 
 # Drive Backup App Index
