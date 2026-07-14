@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -109,11 +109,19 @@ Email notification defaults:
 - Email-address allowlisting retains a subject-reassignment residual. Move to
   opaque Google subjects or a trusted verifier before claiming strong public
   authorization.
-- The source/review repository must remain private because immutable historical
-  review excerpts retain old private configuration. Create any future public
-  source repository fresh from sanitized release commits.
+- The source/review repository became public on 2026-07-13 after the completed
+  tracked-source and reachable-history privacy checks. Treat every branch, pull
+  request, review, and workflow log as public. Internal APKs and privately
+  configured artifacts still require a separate private release surface.
+- Existing sequential commit authorship is preserved on the public branches.
+  Repository contributor/profile totals will fully reflect phase commits only
+  after those branches are merged into the default branch without squashing.
 - GitHub source CI intentionally receives no private values and must never upload
   privately configured debug APKs as artifacts.
+- The project owner currently keeps an ignored, mode-`0600` `.env` as a
+  temporary local vault for the three downloaded OAuth credential bundles and
+  related private configuration. It is not loaded by Gradle, not available to
+  contributors or CI, and not considered a disaster-recovery copy.
 - `validatePublicReleasePrivacy` blocks `publicRelease` whenever the email
   allowlist or Drive folder ID is populated. A configured `publicDebug` is a
   private test artifact and must not be distributed.

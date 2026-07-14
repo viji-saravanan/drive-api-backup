@@ -30,6 +30,24 @@ For a new laptop or repeatable device testing, follow:
 drive backup KB/Drive Backup App Fresh Laptop Setup And Test Runbook.md
 ```
 
+## Public Repository
+
+This source and review repository is public. Treat every tracked file, branch,
+commit, pull request, review, and CI log as public before pushing it. Real
+account addresses, Drive folder IDs, OAuth client IDs, device identifiers,
+tokens, signing material, and machine-specific paths belong only in ignored
+local configuration or an approved private release system.
+
+Internal APKs and configured test APKs must never be uploaded here. A future
+public APK may be published only after the documented public-release privacy,
+signing, and test gates pass.
+
+The project owner may keep an ignored `.env` as a temporary local credential
+vault for downloaded OAuth bundles. The Android build does not load that file.
+Never print it, source it into public CI, attach it to an issue or pull request,
+or treat it as a recoverable backup. Build configuration remains in the ignored
+`private.properties` contract described below.
+
 ## App Identity
 
 - Display name: `Viji Backup`

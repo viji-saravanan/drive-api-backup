@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-source-register
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: sources
 read_when:
   - The agent makes platform claims about Android, Google Drive, Gmail, Apps Script, GitHub, or security.
@@ -69,8 +69,9 @@ This register lists source-backed platform claims. Future agents must verify cur
 
 | Topic | Source | Checked | Claim Used In Plan |
 |---|---|---:|---|
-| Repository visibility | https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility | 2026-07-08 | Public/private visibility is repository-level. |
+| Repository visibility | https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility | 2026-07-13 | Public/private visibility is repository-level; making a repository public exposes its code, activity, Actions history, and logs. |
 | Releases | https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases | 2026-07-08 | Anyone with read access to a repository can view releases. Use separate private/public release surfaces. |
+| Actions secure use | https://docs.github.com/en/actions/reference/security/secure-use | 2026-07-13 | Secret log redaction is not guaranteed for transformed values; write access and privileged workflows can expose configured secrets, so keep PR CI zero-secret and gate any future environment secrets. |
 | Checkout action | https://github.com/actions/checkout | 2026-07-12 | Source CI uses the current v6 release pinned to an exact reviewed commit instead of a mutable branch. |
 | Setup Java action | https://github.com/actions/setup-java | 2026-07-12 | Source CI installs Temurin JDK 17 with the current v5 release pinned to an exact reviewed commit. |
 | Gradle setup action | https://github.com/gradle/actions/blob/main/docs/setup-gradle.md | 2026-07-12 | The official Gradle action configures wrapper execution and caching; CI pins the current v6 release to an exact reviewed commit. |

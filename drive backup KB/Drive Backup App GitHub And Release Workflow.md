@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-github-release-workflow
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: release-process
 read_when:
   - The agent works on GitHub setup, branches, commits, APKs, releases, or account switching.
@@ -13,12 +13,19 @@ do_not_read_when:
 
 ## Repository Model
 
-Use two visibility surfaces:
+The source and review repository is public. Use separate visibility surfaces
+for source collaboration and private release artifacts:
 
-- Private source repository for development and internal APKs.
-- Public release repository or public distribution repository for APKs meant for others.
+- Public source repository for tracked source, development branches, pull
+  requests, reviews, and zero-secret source verification.
+- Private artifact surface for internal APKs, configured test APKs, signing
+  inputs, and any release evidence that contains private identifiers.
+- Public releases in the source repository only for an approved public APK that
+  has passed the complete release gate.
 
-Do not assume a private repository can expose only one release asset publicly while keeping other release assets private. Release visibility follows repository read access.
+Repository visibility applies to its releases, workflow history, and logs. Do
+not assume one asset in a public repository can remain private. Never upload an
+internal or privately configured artifact to the public source repository.
 
 ## Branch Rules
 
@@ -112,6 +119,12 @@ The source-verification workflow is intentionally zero-secret and uploads no
 APK. A future private release workflow may read protected environment values,
 but it must disable caches/artifacts that could retain configured outputs unless
 the storage surface is explicitly approved. Notification recipients remain server-side.
+
+The project owner's ignored `.env` may contain temporary vault copies of
+downloaded OAuth credential bundles. It is not a CI input. No workflow may read,
+source, encode, cache, upload, or inspect that file. GitHub environment secrets,
+if introduced later, must be least-privilege and manually gated; log masking is
+not treated as a guarantee against workflow exfiltration.
 
 ## Release Checklist
 

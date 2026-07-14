@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-fresh-laptop-setup-test-runbook
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 context_role: setup-and-repeatable-testing
 read_when:
   - A contributor or reviewer is starting on a different laptop.
@@ -533,7 +533,7 @@ Before every commit and push:
 ```bash
 git status --short --branch
 git diff --check
-git check-ignore -v private.properties local.properties
+git check-ignore -v .env private.properties local.properties
 git grep -n -I -E 'GOCSPX-|client_secret|refresh_token|access_token'
 git grep -n -I -E '/Users/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 ```
@@ -546,12 +546,19 @@ Also verify ignored/generated files are not staged:
 
 ```bash
 git diff --cached --name-only
-git ls-files private.properties local.properties app/build build .gradle .idea
+git ls-files .env private.properties local.properties app/build build .gradle .idea
 ```
 
-The source/review repository remains private. A future public source repository
-must be created from sanitized release commits because historical review
-excerpts cannot be made reliably private after publication.
+If the project owner has an ignored `.env`, treat it as an opaque temporary
+credential vault. Do not print, copy, source, upload, or expect that file on a
+contributor laptop. `private.properties` remains the only documented local
+Android build-configuration input.
+
+The source/review repository is public. Assume every tracked file, branch,
+commit, pull request, review, and workflow log can be read by anyone. Keep
+private configuration and generated logs outside Git, and publish no internal
+or configured test APK from this repository. A public APK still requires the
+documented privacy, signing, and release test gates.
 
 ## 16. Troubleshooting
 
