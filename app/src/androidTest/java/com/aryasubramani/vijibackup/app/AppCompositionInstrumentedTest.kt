@@ -23,9 +23,19 @@ import com.aryasubramani.vijibackup.auth.google.GoogleSignInClient
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInMode
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInResult
 import com.aryasubramani.vijibackup.auth.presentation.AuthTestTags
+import com.aryasubramani.vijibackup.folderaccess.domain.BeginFolderPickerResult
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
+import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessTestTags
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,6 +58,10 @@ class AppCompositionInstrumentedTest {
             application.appContainer.googleSignInClient,
             application.appContainer.googleSignInClient,
         )
+        assertSame(
+            application.appContainer.folderMappingRepository,
+            application.appContainer.folderMappingRepository,
+        )
     }
 
     @Test
@@ -58,8 +72,12 @@ class AppCompositionInstrumentedTest {
         runBlocking { sessionStore.clear() }
 
         try {
-            ActivityScenario.launch(MainActivity::class.java).use {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 composeRule.waitForIdle()
+
+                scenario.onActivity { activity ->
+                    assertTrue(activity.protectedWindowPolicyAppliedForTesting)
+                }
 
                 composeRule.onNodeWithTag(AuthTestTags.Screen).assertIsDisplayed()
                 composeRule.onAllNodesWithTag(VijiBackupTestTags.ProtectedContent)
@@ -85,11 +103,12 @@ class AppCompositionInstrumentedTest {
     }
 
     @Test
-    fun mainActivityDispatchesOnceRelocksAfterBackgroundAndSurvivesRecreation() {
+    fun mainActivityKeepsCurrentProcessApprovedAcrossBackgroundAndRecreation() {
         val application = ApplicationProvider.getApplicationContext<VijiBackupApplication>()
         val account = approvedAccount()
         val sessionStore = InMemoryAuthSessionStore()
         val signInModes = mutableListOf<GoogleSignInMode>()
+        val folderRepository = EmptyFolderMappingRepository()
         val fakeContainer = object : AppContainer {
             override val authSessionManager = AuthSessionManager(
                 accessPolicy = AccountAccessPolicy(setOf(account.email)),
@@ -100,6 +119,7 @@ class AppCompositionInstrumentedTest {
                 signInModes += mode
                 GoogleSignInResult.Success(account)
             }
+            override val folderMappingRepository = folderRepository
             override val isGoogleSignInConfigured = true
         }
         application.testAppContainer = fakeContainer
@@ -107,12 +127,16 @@ class AppCompositionInstrumentedTest {
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 composeRule.waitForIdle()
+
+                assertEquals(0, folderRepository.observeCalls)
                 composeRule.onNodeWithTag(AuthTestTags.SignInButton).performClick()
                 composeRule.waitForIdle()
 
                 composeRule.onNodeWithTag(VijiBackupTestTags.ProtectedContent)
                     .assertIsDisplayed()
+                composeRule.onNodeWithTag(FolderAccessTestTags.Screen).assertIsDisplayed()
                 assertEquals(listOf(GoogleSignInMode.Explicit), signInModes)
+                assertEquals(1, folderRepository.observeCalls)
 
                 scenario.moveToState(Lifecycle.State.CREATED)
                 scenario.moveToState(Lifecycle.State.RESUMED)
@@ -120,25 +144,45 @@ class AppCompositionInstrumentedTest {
 
                 composeRule.onNodeWithTag(VijiBackupTestTags.ProtectedContent)
                     .assertIsDisplayed()
-                assertEquals(
-                    listOf(
-                        GoogleSignInMode.Explicit,
-                        GoogleSignInMode.AuthorizedAccounts,
-                    ),
-                    signInModes,
-                )
+                assertEquals(listOf(GoogleSignInMode.Explicit), signInModes)
+                assertEquals(1, folderRepository.observeCalls)
 
                 scenario.recreate()
                 composeRule.waitForIdle()
 
                 composeRule.onNodeWithTag(VijiBackupTestTags.ProtectedContent)
                     .assertIsDisplayed()
-                assertEquals(2, signInModes.size)
+                assertEquals(listOf(GoogleSignInMode.Explicit), signInModes)
+                assertEquals(1, folderRepository.observeCalls)
             }
         } finally {
             application.testAppContainer = null
         }
     }
+}
+
+private class EmptyFolderMappingRepository : FolderMappingRepository {
+    private val mappings = MutableStateFlow(emptyList<FolderMapping>())
+    var observeCalls = 0
+
+    override fun observeMappings(): Flow<List<FolderMapping>> {
+        observeCalls += 1
+        return mappings
+    }
+
+    override suspend fun beginAdd(): BeginFolderPickerResult =
+        BeginFolderPickerResult.StorageFailure
+
+    override suspend fun beginRepair(mappingId: String): BeginFolderPickerResult =
+        BeginFolderPickerResult.StorageFailure
+
+    override suspend fun completePicker(
+        requestToken: String,
+        selection: FolderPickerSelection,
+    ): FolderPickerCompletion = FolderPickerCompletion.StorageFailure
+
+    override suspend fun remove(mappingId: String): RemoveFolderResult =
+        RemoveFolderResult.StorageFailure
 }
 
 private class InMemoryAuthSessionStore : AuthSessionStore {

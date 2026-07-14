@@ -32,7 +32,8 @@ Use the smallest level that can prove the work.
 | A. Source build | Compile, run unit tests, inspect code | Not required | Not required | Not required |
 | B. Android integration | Run synthetic Credential Manager, DataStore, and Compose tests | Recommended | Not required | Physical phone or Play-enabled emulator |
 | C. Live Google auth | Exercise the real Google account chooser and consent | Required | Usually required for the laptop's debug SHA-1 | Required or Play-enabled emulator with test account |
-| D. Drive integration | Future Phase 3 Drive authorization and upload tests | Required | Drive API/authorization setup required | Required |
+| D. Live folder access | Phase 3 picker, persisted grants, scan, repair, and removal | Required | Same live-auth setup as Level C | Required |
+| E. Drive integration | Phase 4 Drive authorization and upload tests | Required | Drive API/authorization setup required | Required |
 
 A clean checkout without `private.properties` must still compile. It is expected
 to fail cloud configuration closed and show `Setup required`; that is not a
@@ -42,10 +43,10 @@ build failure.
 
 The contributor needs:
 
-- read access to the private GitHub repository;
+- read access to the public GitHub repository;
 - permission to create a separate branch and PR;
 - a Google account approved by the project owner for live auth testing;
-- access to a modern Android device with current Google Play services for Level C;
+- access to a modern Android device with current Google Play services for Levels C through E;
 - project-owner help for Google Auth Platform changes if the contributor cannot
   access the Cloud project.
 
@@ -187,26 +188,26 @@ cd viji-backup
 git fetch --all --prune
 ```
 
-For Phase 2 test-only review, inspect the remote branch without committing:
+For Phase 3 test-only review, inspect the remote branch without committing:
 
 ```bash
-git switch --detach origin/feature/phase-2-auth-allowlist
+git switch --detach origin/feature/phase-3-local-folder-selection
 ```
 
-For changes, create a new branch from the Phase 2 branch:
+For Phase 3 review or fixes, create a new branch from the Phase 3 branch:
 
 ```bash
-git switch -c contributor/<github-user>/phase-2-review \
-  origin/feature/phase-2-auth-allowlist
+git switch -c contributor/<github-user>/phase-3-review \
+  origin/feature/phase-3-local-folder-selection
 ```
 
 Rules:
 
 - never push directly to `main`, `dev`, `setup/phase-1-foundation`, or
-  `feature/phase-2-auth-allowlist`;
-- a review/fix PR created before Phase 2 is integrated must target
-  `feature/phase-2-auth-allowlist`;
-- do not merge the stacked Phase 2 branch before its Phase 1 base is ready;
+  either shared Phase 2 or Phase 3 feature branch;
+- a Phase 3 review/fix PR must target
+  `feature/phase-3-local-folder-selection`;
+- do not merge a stacked phase branch before its documented base is ready;
 - keep commits sequential and scoped to one understandable step;
 - do not rewrite or revert unrelated changes from another contributor.
 
@@ -286,7 +287,7 @@ Fill these keys through an approved private channel:
 
 | Key | Required for | Value source |
 |---|---|---|
-| `vijiBackup.driveUploadFolderId` | Future Drive tests | Shared upload folder ID |
+| `vijiBackup.driveUploadFolderId` | Future Phase 4 Drive tests | Shared upload folder ID |
 | `vijiBackup.allowedGoogleAccounts` | Live auth | Comma-separated approved test accounts |
 | `vijiBackup.internalAndroidOAuthClientId` | Internal flavor identity | Android OAuth client for internal package and this signing SHA-1 |
 | `vijiBackup.publicAndroidOAuthClientId` | Public flavor identity | Android OAuth client for public package and this signing SHA-1 |
@@ -408,7 +409,8 @@ With one authorized device or Play-enabled emulator connected:
 ```
 
 These suites use synthetic credentials and test Compose hosts. They do not
-select real Google accounts.
+select real Google accounts or prove access to a user's real folders. Their
+results supplement, but never replace, the applicable live-device matrix.
 
 To run one instrumentation class:
 
@@ -491,7 +493,41 @@ For the public flavor, register the public package against this laptop's SHA-1,
 then run at least one representative approved, cancellation, and blocked test.
 Do not publish the debug APK. Build outputs contain private configuration.
 
-## 14. Safe Test Evidence
+## 14. Manual Live Folder Access Matrix
+
+Run this matrix on the physical Samsung for every Phase 3 release candidate.
+Use the internal flavor and a currently approved live account. The production
+Phase 3 path does not contact Drive; do not report Drive integration from these
+cases. Phase 4 separately requires the real shared Drive destination.
+
+Before destructive grant tests, create a dedicated, clearly named folder on the
+phone containing disposable files. Existing personal folders may be selected
+and scanned, but automation must never rename, edit, move, or delete their
+contents. Capture an in-memory mutation sentinel before and after each workflow:
+relative path, size, modified time, and SHA-256 where readable. Evidence records
+only `unchanged` or a redacted mismatch count, never real relative paths.
+
+| ID | Case | Expected result |
+|---|---|---|
+| FOLDER-LIVE-01 | Select the dedicated on-device test tree | One mapping is saved; only a persistent read grant exists; no write grant exists |
+| FOLDER-LIVE-02 | Select representative real folders such as Documents, Camera, Pictures, WhatsApp media, and an allowed Downloads subfolder | Each allowed tree maps independently; a platform-blocked root produces a clear explanation and no mapping |
+| FOLDER-LIVE-03 | Scan a mapped real folder | Aggregate progress advances and completes without opening Drive or changing source content |
+| FOLDER-LIVE-04 | Cancel a sufficiently long scan | Progress stops promptly, the mapping remains usable, no source content changes, and retry succeeds |
+| FOLDER-LIVE-05 | Force-stop and relaunch after mapping | Reauthentication is required; after approval the mapping and read grant remain usable |
+| FOLDER-LIVE-06 | Revoke one dedicated test-tree grant with the instrumentation-only test action | That mapping becomes `Needs repair`; healthy mappings still scan |
+| FOLDER-LIVE-07 | Repair the broken mapping by selecting the same tree | Access returns without the replacement grant being accidentally released |
+| FOLDER-LIVE-08 | Remove the dedicated test mapping | The unreferenced grant is released; every source file remains unchanged |
+| FOLDER-LIVE-09 | Configure with approved account A, relock, then approve account B | B can manage the same installation mappings under the documented co-administrator model |
+| FOLDER-LIVE-10 | Cancel the picker, rotate during picker return, and rapidly attempt a second add | No mapping or orphan grant is created from cancellation and only one current request can complete |
+| FOLDER-LIVE-11 | Open recent apps while folder labels are visible | The app task preview does not expose protected content |
+| FOLDER-LIVE-12 | Run add, scan, cancel, repair, and remove while mutation sentinels are active | All sentinels report unchanged and reviewed app logs contain no labels, URIs, IDs, or filenames |
+
+Real user interaction is required for system picker and account chooser steps.
+An instrumentation provider may force null cursors, cycles, loading cursors, and
+provider exceptions that cannot be triggered safely on personal data, but those
+tests are supporting evidence only and cannot satisfy any `FOLDER-LIVE-*` case.
+
+## 15. Safe Test Evidence
 
 Record:
 
@@ -526,7 +562,7 @@ attach raw logs until they have been reviewed for private data:
 Keep `app-log.txt` outside the repository and delete it after recording redacted
 counts or findings.
 
-## 15. Privacy And Repository Checks
+## 16. Privacy And Repository Checks
 
 Before every commit and push:
 
@@ -555,12 +591,13 @@ contributor laptop. `private.properties` remains the only documented local
 Android build-configuration input.
 
 The source/review repository is public. Assume every tracked file, branch,
-commit, pull request, review, and workflow log can be read by anyone. Keep
-private configuration and generated logs outside Git, and publish no internal
-or configured test APK from this repository. A public APK still requires the
-documented privacy, signing, and release test gates.
+commit, pull request, review excerpt, workflow log, and artifact can be read by
+anyone permanently. Keep private build configuration, generated logs, and raw
+live-device evidence outside Git, and publish no internal or configured test APK
+from this repository. A public APK still requires the documented privacy,
+signing, and release test gates.
 
-## 16. Troubleshooting
+## 17. Troubleshooting
 
 | Symptom | Check in this order |
 |---|---|
@@ -576,8 +613,11 @@ documented privacy, signing, and release test gates.
 | `appops ... No UID for androidx.test.services` | Treat as tooling noise only if instrumentation starts, all tests run, and Gradle succeeds |
 | Install fails for storage | Free space manually; never delete user data through automation |
 | Build appears to use old private config | Unset temporary environment/`-P` values; use `--no-configuration-cache`; rebuild and reinstall |
+| Folder root is disabled in the picker | Select an allowed subfolder; never add broad storage or all-files access as a workaround |
+| Mapping shows `Needs repair` | Re-select the intended tree; do not delete source data or silently replace the mapping |
+| Scan stops after one provider error | Treat as a defect: record the failed mapping and verify unrelated mappings continue |
 
-## 17. Handoff Prompt For Another AI
+## 18. Handoff Prompt For Another AI
 
 Give the other AI this instruction together with repository access:
 
@@ -594,10 +634,11 @@ Do not edit until that baseline is understood. Treat private.properties and
 local.properties as opaque ignored inputs: never print, quote, commit, upload,
 or include their values in logs/PRs. Never use an OAuth client secret.
 
-Base any contribution branch on origin/feature/phase-2-auth-allowlist unless
-Project State says Phase 2 has moved. Never push directly to main, dev, the
-Phase 1 branch, or the Phase 2 branch. Use your own authorized GitHub noreply
-identity and open a PR back to the current phase branch. Keep commits sequential.
+Load Project State before choosing a base. For Phase 3 review work, base the
+contribution branch on origin/feature/phase-3-local-folder-selection and open a
+PR back to that branch. Never push directly to main, dev, or a shared phase
+branch. Use your own authorized GitHub noreply identity and keep commits
+sequential.
 
 For every change, inspect callers, dependencies, resources/manifests,
 persistence, tests, docs, and release impact. Add negative tests, run the narrow
@@ -606,9 +647,9 @@ evidence. Do not claim live Google auth works on a fresh laptop until its debug
 SHA-1/package OAuth clients and OAuth test users are configured.
 ```
 
-## 18. Environment Ready Gate
+## 19. Environment Ready Gate
 
-The laptop is ready for frequent Phase 2 work only when all are true:
+The laptop is ready for frequent Phase 3 work only when all are true:
 
 - repository access and contributor Git identity are verified;
 - branch is based on the current Phase 2 remote branch;
@@ -621,6 +662,8 @@ The laptop is ready for frequent Phase 2 work only when all are true:
 - OAuth test users and local allowlist are intentionally configured;
 - ADB reports an authorized device for connected/live tests;
 - internal/public connected suites pass;
+- the live folder matrix is assigned to an authorized physical device and no
+  synthetic result is counted as its replacement;
 - zero-secret GitHub source verification passes or its absence is explained;
 - normal configuration is restored after every temporary blocked-account test;
 - `git status` contains only intended source, test, and documentation changes.

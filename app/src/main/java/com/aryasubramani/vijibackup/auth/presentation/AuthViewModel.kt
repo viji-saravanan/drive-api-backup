@@ -22,7 +22,6 @@ class AuthViewModel(
     private var nextOperationId = 0L
     private var activeSignIn: ActiveSignIn? = null
     private var retryAction: RetryAction? = null
-    private var isAppBackgrounded = false
 
     val uiState: StateFlow<AuthUiState> = mutableUiState.asStateFlow()
 
@@ -119,17 +118,11 @@ class AuthViewModel(
     }
 
     fun onAppBackgrounded() {
-        isAppBackgrounded = true
-        val approved = mutableUiState.value as? AuthUiState.Approved ?: return
-        retryAction = null
-        mutableUiState.value = AuthUiState.ReauthenticationRequired(
-            account = approved.account,
-            automaticAttemptPending = true,
-        )
+        // Approval is scoped to this ViewModel/process. A cold process still reloads as locked.
     }
 
     fun onAppForegrounded() {
-        isAppBackgrounded = false
+        // Reserved for a future user-configurable inactivity timeout.
     }
 
     private fun initialize() {
@@ -183,14 +176,7 @@ class AuthViewModel(
             mutableUiState.value = when (val authorization = sessionManager.authorize(result.account)) {
                 is AuthorizeAccountResult.Approved -> {
                     retryAction = null
-                    if (isAppBackgrounded) {
-                        AuthUiState.ReauthenticationRequired(
-                            account = authorization.account,
-                            automaticAttemptPending = true,
-                        )
-                    } else {
-                        AuthUiState.Approved(authorization.account)
-                    }
+                    AuthUiState.Approved(authorization.account)
                 }
                 is AuthorizeAccountResult.Blocked -> {
                     retryAction = null

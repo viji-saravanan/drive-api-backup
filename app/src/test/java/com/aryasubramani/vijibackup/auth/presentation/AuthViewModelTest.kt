@@ -133,7 +133,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun backgroundedApprovedSessionRelocksAndAccountRemovalSignsOut() = runTest {
+    fun backgroundingKeepsApprovedSessionValidForTheCurrentProcess() = runTest {
         val store = FakeAuthSessionStore()
         val account = approvedAccount()
         val viewModel = createViewModel(store = store)
@@ -143,23 +143,8 @@ class AuthViewModelTest {
 
         viewModel.onAppBackgrounded()
 
-        assertEquals(
-            AuthUiState.ReauthenticationRequired(
-                account = account,
-                automaticAttemptPending = true,
-            ),
-            viewModel.uiState.value,
-        )
-
-        viewModel.startAutomaticReauthentication()
-        val request = requireNotNull(
-            (viewModel.uiState.value as AuthUiState.SigningIn).request,
-        )
-        viewModel.onSignInResult(request.id, GoogleSignInResult.NoCredential)
-        advanceUntilIdle()
-
-        assertEquals(AuthUiState.SignedOut(), viewModel.uiState.value)
-        assertEquals(null, store.account)
+        assertEquals(AuthUiState.Approved(account), viewModel.uiState.value)
+        assertEquals(account, store.account)
     }
 
     @Test
@@ -193,7 +178,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun credentialFinishingWhileTheAppIsBackgroundedCannotUnlockProtectedContent() = runTest {
+    fun credentialFinishingWhileBackgroundedApprovesTheCurrentProcess() = runTest {
         val saveStarted = CompletableDeferred<Unit>()
         val allowSaveToFinish = CompletableDeferred<Unit>()
         val store = FakeAuthSessionStore().apply {
@@ -215,13 +200,7 @@ class AuthViewModelTest {
         allowSaveToFinish.complete(Unit)
         advanceUntilIdle()
 
-        assertEquals(
-            AuthUiState.ReauthenticationRequired(
-                account = account,
-                automaticAttemptPending = true,
-            ),
-            viewModel.uiState.value,
-        )
+        assertEquals(AuthUiState.Approved(account), viewModel.uiState.value)
         assertEquals(account, store.account)
     }
 

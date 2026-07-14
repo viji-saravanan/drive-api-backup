@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-github-release-workflow
 status: active
-last_updated: 2026-07-13
+last_updated: 2026-07-14
 context_role: release-process
 read_when:
   - The agent works on GitHub setup, branches, commits, APKs, releases, or account switching.
@@ -62,6 +62,24 @@ Each commit should be buildable where practical. Do not mix unrelated features.
   private screenshots into a PR.
 - Keep the PR draft while required release evidence or its base PR remains incomplete.
 
+### Merging Stacked Pull Requests
+
+When the user authorizes integration, merge a phase stack from its oldest base
+to its newest head:
+
+1. Verify every PR is mergeable, its available checks pass, current review
+   feedback is resolved or explicitly dispositioned, and the local worktree is
+   clean.
+2. Mark the oldest PR ready, obtain the required independent approval, and use
+   a merge commit. Do not squash or rebase away sequential attribution.
+3. After the base merges, retarget only the next direct child to the integrated
+   branch. Recheck its diff, checks, approval, and mergeability before merging.
+4. Retarget sibling PRs independently after their shared base is integrated;
+   never collapse one sibling's scope into another merely to shorten the stack.
+5. Do not delete an ancestor branch until every descendant PR has been
+   retargeted. After the final merge, update local `main` by fast-forward and
+   verify PR states, checks, commit ancestry, contributor metadata, and privacy.
+
 ## Commit Attribution Split
 
 The repository intentionally uses both Arya personal and Viji GitHub identities. Do not accidentally commit as Arya work.
@@ -101,6 +119,26 @@ Before every commit and push:
 - Confirm commit email uses the selected account's GitHub `noreply` address.
 
 Use Arya personal and Viji intentionally according to the commit attribution split above. Never commit or push from Arya work unless the user explicitly changes this rule.
+
+## Generated Gradle Wrapper Integrity
+
+Treat `gradlew`, `gradlew.bat`, `gradle-wrapper.jar`, and
+`gradle-wrapper.properties` as one generated change surface. Never hand-edit one
+launcher to answer a review finding.
+
+When the pinned Gradle version changes, or wrapper integrity is questioned:
+
+1. Run the wrapper task with the exact pinned version and distribution type,
+   then run it again through the refreshed wrapper.
+2. Verify a third identical invocation is up-to-date and produces no new diff.
+3. Compare the wrapper JAR SHA-256 with Gradle's official checksum for that
+   exact version.
+4. Run `sh -n gradlew`, `./gradlew --version`, and the full two-flavor source
+   verification gate.
+5. Commit all generated wrapper files together in an isolated build commit.
+
+If generated output differs from a review assumption, preserve the generated
+output and record the command, Gradle revision, checksum match, and test result.
 
 ## APK Channels
 

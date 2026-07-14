@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-implementation-roadmap
 status: active
-last_updated: 2026-07-12
+last_updated: 2026-07-14
 context_role: roadmap
 read_when:
   - The agent needs sequencing, milestones, or implementation gates.
@@ -97,9 +97,8 @@ Exit gate:
 
 ## Phase 2: Auth And Allowlist
 
-Status: implemented on `feature/phase-2-auth-allowlist`; final review and stacked
-PR integration are in progress. Release-only manual cases remain tracked in the
-Phase 2 plan and Testing Plan.
+Status: integrated into `main` through PR #2. Release-only manual cases remain
+tracked in the Phase 2 plan and Testing Plan.
 
 Load:
 
@@ -121,8 +120,14 @@ Exit gate:
 
 ## Phase 3: Local Folder Selection
 
+Status: the implemented folder-selection slices are integrated into `main`
+through PR #4. Health classification and iterative read-only scanning remain
+open. The adversarially reviewed execution contract is
+[[Drive Backup App Phase 3 Local Folder Access Implementation Plan]].
+
 Load:
 
+- [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
 - [[Drive Backup App Product Requirements]]
 - [[Drive Backup App Architecture]]
 - [[Drive Backup App Source Register]]

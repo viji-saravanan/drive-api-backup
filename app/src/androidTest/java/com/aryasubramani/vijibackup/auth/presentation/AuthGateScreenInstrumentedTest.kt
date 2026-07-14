@@ -27,6 +27,8 @@ import com.aryasubramani.vijibackup.app.VijiBackupApp
 import com.aryasubramani.vijibackup.app.VijiBackupTestTags
 import com.aryasubramani.vijibackup.auth.domain.GoogleAccount
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInMode
+import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessTestTags
+import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -64,12 +66,16 @@ class AuthGateScreenInstrumentedTest {
     @Test
     fun approvedAccountIsTheOnlyStateThatRendersProtectedContent() {
         var signOutRequested = false
+        var addFolderRequested = false
         composeRule.setContent {
             VijiBackupApp(
                 uiState = AuthUiState.Approved(approvedAccount()),
+                folderAccessUiState = FolderAccessUiState(isLoading = false),
                 onSignIn = {},
                 onRetry = {},
                 onSignOut = { signOutRequested = true },
+                onAddFolder = { addFolderRequested = true },
+                onRepairFolder = {},
             )
         }
         composeRule.waitForIdle()
@@ -77,6 +83,10 @@ class AuthGateScreenInstrumentedTest {
         composeRule.onNodeWithTag(VijiBackupTestTags.ProtectedContent).assertIsDisplayed()
         composeRule.onNodeWithText(appString(R.string.auth_approved_title)).assertIsDisplayed()
         composeRule.onAllNodesWithTag(AuthTestTags.SignInButton).assertCountEquals(0)
+        composeRule.onNodeWithTag(FolderAccessTestTags.Screen).assertIsDisplayed()
+        composeRule.onNodeWithTag(FolderAccessTestTags.AddButton)
+            .assertIsDisplayed()
+            .performClick()
         composeRule.onNodeWithTag(AuthTestTags.SignOutButton)
             .assertIsDisplayed()
             .assertHasClickAction()
@@ -84,6 +94,7 @@ class AuthGateScreenInstrumentedTest {
             .performClick()
 
         assertTrue(signOutRequested)
+        assertTrue(addFolderRequested)
     }
 
     @Test
@@ -123,6 +134,8 @@ class AuthGateScreenInstrumentedTest {
         nonApprovedStates.forEach { nextState ->
             composeRule.runOnIdle { state.value = nextState }
             composeRule.onAllNodesWithTag(VijiBackupTestTags.ProtectedContent)
+                .assertCountEquals(0)
+            composeRule.onAllNodesWithTag(FolderAccessTestTags.Screen)
                 .assertCountEquals(0)
         }
     }
