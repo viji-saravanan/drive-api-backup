@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,12 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aryasubramani.vijibackup.R
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderAccessHealth
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderScanProgress
 
 @Composable
 internal fun FolderAccessContent(
@@ -40,6 +44,9 @@ internal fun FolderAccessContent(
     onAddFolder: () -> Unit,
     onRepairFolder: (String) -> Unit,
     onRemoveFolder: (String) -> Unit = {},
+    onSetFolderEnabled: (String, Boolean) -> Unit = { _, _ -> },
+    onScanFolder: (String) -> Unit = {},
+    onCancelScan: (String) -> Unit = {},
 ) {
     var pendingRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
     val actionsEnabled = !uiState.isLoading && uiState.removingMappingId == null
@@ -111,7 +118,17 @@ internal fun FolderAccessContent(
                         mapping = mapping,
                         displayName = displayName,
                         isRemoving = uiState.removingMappingId == mapping.id,
+                        isUpdatingEnabled = mapping.id in uiState.updatingEnabledMappingIds,
+                        health = uiState.healthByMappingId[mapping.id]
+                            ?: FolderAccessHealth.Checking,
+                        scanState = uiState.scanStateByMappingId[mapping.id]
+                            ?: FolderScanUiState.NotStarted,
                         actionsEnabled = actionsEnabled,
+                        onEnabledChange = { enabled ->
+                            onSetFolderEnabled(mapping.id, enabled)
+                        },
+                        onScan = { onScanFolder(mapping.id) },
+                        onCancelScan = { onCancelScan(mapping.id) },
                         onRepair = { onRepairFolder(mapping.id) },
                         onRemove = { pendingRemovalId = mapping.id },
                     )
@@ -173,23 +190,48 @@ private fun FolderMappingRow(
     mapping: FolderMapping,
     displayName: String,
     isRemoving: Boolean,
+    isUpdatingEnabled: Boolean,
+    health: FolderAccessHealth,
+    scanState: FolderScanUiState,
     actionsEnabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onScan: () -> Unit,
+    onCancelScan: () -> Unit,
     onRepair: () -> Unit,
     onRemove: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 128.dp)
+            .heightIn(min = 240.dp)
             .padding(vertical = 12.dp)
             .testTag(FolderAccessTestTags.MappingRow),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = displayName,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = displayName,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            val switchDescription = stringResource(
+                R.string.folder_access_enabled_description,
+                displayName,
+            )
+            Switch(
+                checked = mapping.enabled,
+                onCheckedChange = onEnabledChange,
+                enabled = actionsEnabled && !isUpdatingEnabled,
+                modifier = Modifier
+                    .testTag(FolderAccessTestTags.enabledSwitch(mapping.id))
+                    .semantics { contentDescription = switchDescription },
+            )
+        }
         Row(
             modifier = Modifier.heightIn(min = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -216,6 +258,74 @@ private fun FolderMappingRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        Text(
+            text = stringResource(health.messageResource()),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(FolderAccessTestTags.health(mapping.id)),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (health == FolderAccessHealth.Ready) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource(scanState.messageResource()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(FolderAccessTestTags.scanStatus(mapping.id)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            scanState.progress()?.let { progress ->
+                Text(
+                    text = stringResource(
+                        R.string.folder_access_scan_progress,
+                        progress.foldersVisited,
+                        progress.filesDiscovered,
+                        progress.knownBytes,
+                        progress.filesWithUnknownSize,
+                        progress.unreadableEntries,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+        ) {
+            if (scanState is FolderScanUiState.Running) {
+                OutlinedButton(
+                    onClick = onCancelScan,
+                    enabled = actionsEnabled,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag(FolderAccessTestTags.cancelScanButton(mapping.id)),
+                ) {
+                    Text(stringResource(R.string.folder_access_cancel_scan))
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onScan,
+                    enabled = actionsEnabled && health == FolderAccessHealth.Ready,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag(FolderAccessTestTags.scanButton(mapping.id)),
+                ) {
+                    Text(stringResource(R.string.folder_access_scan))
+                }
+            }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -244,6 +354,36 @@ private fun FolderMappingRow(
             }
         }
     }
+}
+
+@StringRes
+private fun FolderAccessHealth.messageResource(): Int = when (this) {
+    FolderAccessHealth.Checking -> R.string.folder_access_health_checking
+    FolderAccessHealth.Ready -> R.string.folder_access_health_ready
+    FolderAccessHealth.PermissionMissing -> R.string.folder_access_health_permission_missing
+    FolderAccessHealth.TreeMissing -> R.string.folder_access_health_tree_missing
+    FolderAccessHealth.ProviderAuthRequired -> R.string.folder_access_health_auth_required
+    FolderAccessHealth.TemporarilyUnavailable ->
+        R.string.folder_access_health_temporarily_unavailable
+}
+
+@StringRes
+private fun FolderScanUiState.messageResource(): Int = when (this) {
+    FolderScanUiState.NotStarted -> R.string.folder_access_scan_not_started
+    is FolderScanUiState.Running -> R.string.folder_access_scan_running
+    is FolderScanUiState.Complete -> R.string.folder_access_scan_complete
+    is FolderScanUiState.Partial -> R.string.folder_access_scan_partial
+    is FolderScanUiState.Failed -> R.string.folder_access_scan_failed
+    is FolderScanUiState.Cancelled -> R.string.folder_access_scan_cancelled
+}
+
+private fun FolderScanUiState.progress(): FolderScanProgress? = when (this) {
+    FolderScanUiState.NotStarted -> null
+    is FolderScanUiState.Running -> progress
+    is FolderScanUiState.Complete -> summary.progress
+    is FolderScanUiState.Partial -> summary.progress
+    is FolderScanUiState.Failed -> summary?.progress
+    is FolderScanUiState.Cancelled -> progress
 }
 
 @StringRes
@@ -276,4 +416,9 @@ internal object FolderAccessTestTags {
 
     fun repairButton(mappingId: String) = "folder_access_repair_$mappingId"
     fun removeButton(mappingId: String) = "folder_access_remove_$mappingId"
+    fun enabledSwitch(mappingId: String) = "folder_access_enabled_$mappingId"
+    fun health(mappingId: String) = "folder_access_health_$mappingId"
+    fun scanStatus(mappingId: String) = "folder_access_scan_status_$mappingId"
+    fun scanButton(mappingId: String) = "folder_access_scan_$mappingId"
+    fun cancelScanButton(mappingId: String) = "folder_access_cancel_scan_$mappingId"
 }

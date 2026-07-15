@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -16,7 +17,11 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.aryasubramani.vijibackup.R
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderAccessHealth
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderScanIssue
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderScanProgress
+import com.aryasubramani.vijibackup.folderaccess.domain.FolderScanSummary
 import com.aryasubramani.vijibackup.ui.theme.VijiBackupTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -82,6 +87,162 @@ class FolderAccessScreenInstrumentedTest {
             .assertHasClickAction()
             .performClick()
         assertEquals(listOf("mapping-b"), repaired)
+    }
+
+    @Test
+    fun disabledReadyMappingCanToggleAndStartManualScan() {
+        val mapping = FolderMapping("mapping-a", "Downloads test", enabled = false)
+        val enabledChanges = mutableListOf<Pair<String, Boolean>>()
+        val scans = mutableListOf<String>()
+        composeRule.setFolderContent(
+            state = FolderAccessUiState(
+                mappings = listOf(mapping),
+                isLoading = false,
+                healthByMappingId = mapOf(mapping.id to FolderAccessHealth.Ready),
+                scanStateByMappingId = mapOf(mapping.id to FolderScanUiState.NotStarted),
+            ),
+            onSetFolderEnabled = { mappingId, enabled ->
+                enabledChanges += mappingId to enabled
+            },
+            onScanFolder = scans::add,
+        )
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.enabledSwitch(mapping.id))
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+        composeRule.onNodeWithTag(FolderAccessTestTags.scanButton(mapping.id))
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+
+        assertEquals(listOf(mapping.id to true), enabledChanges)
+        assertEquals(listOf(mapping.id), scans)
+    }
+
+    @Test
+    fun runningScanShowsLongProgressAndForwardsExactCancellation() {
+        val mapping = FolderMapping("mapping-a", "Camera", enabled = true)
+        val progress = FolderScanProgress(
+            foldersVisited = Long.MAX_VALUE,
+            filesDiscovered = Long.MAX_VALUE - 1,
+            knownBytes = Long.MAX_VALUE - 2,
+            filesWithUnknownSize = 3,
+            unreadableEntries = 4,
+        )
+        val cancellations = mutableListOf<String>()
+        composeRule.setFolderContent(
+            state = FolderAccessUiState(
+                mappings = listOf(mapping),
+                isLoading = false,
+                healthByMappingId = mapOf(mapping.id to FolderAccessHealth.Ready),
+                scanStateByMappingId = mapOf(
+                    mapping.id to FolderScanUiState.Running(progress),
+                ),
+            ),
+            onCancelScan = cancellations::add,
+        )
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.scanStatus(mapping.id))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(
+            appString(
+                R.string.folder_access_scan_progress,
+                progress.foldersVisited,
+                progress.filesDiscovered,
+                progress.knownBytes,
+                progress.filesWithUnknownSize,
+                progress.unreadableEntries,
+            ),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(FolderAccessTestTags.cancelScanButton(mapping.id))
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onAllNodesWithTag(FolderAccessTestTags.scanButton(mapping.id))
+            .assertCountEquals(0)
+        assertEquals(listOf(mapping.id), cancellations)
+    }
+
+    @Test
+    fun everyHealthAndTerminalScanStateHasTypedText() {
+        val mapping = FolderMapping("mapping-a", "Camera", enabled = true)
+        val state = mutableStateOf(
+            FolderAccessUiState(mappings = listOf(mapping), isLoading = false),
+        )
+        composeRule.setContent {
+            VijiBackupTheme {
+                FolderAccessContent(
+                    uiState = state.value,
+                    onAddFolder = {},
+                    onRepairFolder = {},
+                )
+            }
+        }
+
+        val healthResources = listOf(
+            FolderAccessHealth.Checking to R.string.folder_access_health_checking,
+            FolderAccessHealth.Ready to R.string.folder_access_health_ready,
+            FolderAccessHealth.PermissionMissing to R.string.folder_access_health_permission_missing,
+            FolderAccessHealth.TreeMissing to R.string.folder_access_health_tree_missing,
+            FolderAccessHealth.ProviderAuthRequired to R.string.folder_access_health_auth_required,
+            FolderAccessHealth.TemporarilyUnavailable to
+                R.string.folder_access_health_temporarily_unavailable,
+        )
+        healthResources.forEach { (health, resource) ->
+            composeRule.runOnIdle {
+                state.value = state.value.copy(
+                    healthByMappingId = mapOf(mapping.id to health),
+                    scanStateByMappingId = mapOf(mapping.id to FolderScanUiState.NotStarted),
+                )
+            }
+            composeRule.onNodeWithTag(FolderAccessTestTags.health(mapping.id))
+                .assertTextEquals(appString(resource))
+        }
+
+        val summary = FolderScanSummary(
+            progress = FolderScanProgress(filesDiscovered = 2, unreadableEntries = 1),
+            elapsedTimeMillis = 10,
+            issues = setOf(FolderScanIssue.MalformedEntry),
+        )
+        val terminalResources = listOf(
+            FolderScanUiState.Complete(summary) to R.string.folder_access_scan_complete,
+            FolderScanUiState.Partial(summary) to R.string.folder_access_scan_partial,
+            FolderScanUiState.Failed(summary) to R.string.folder_access_scan_failed,
+            FolderScanUiState.Failed() to R.string.folder_access_scan_failed,
+            FolderScanUiState.Cancelled(summary.progress) to R.string.folder_access_scan_cancelled,
+        )
+        terminalResources.forEach { (scanState, resource) ->
+            composeRule.runOnIdle {
+                state.value = state.value.copy(
+                    healthByMappingId = mapOf(mapping.id to FolderAccessHealth.Ready),
+                    scanStateByMappingId = mapOf(mapping.id to scanState),
+                )
+            }
+            composeRule.onNodeWithTag(FolderAccessTestTags.scanStatus(mapping.id))
+                .assertTextEquals(appString(resource))
+        }
+    }
+
+    @Test
+    fun degradedMappingDisablesScanButKeepsRepairAndRemoveAvailable() {
+        val mapping = FolderMapping("mapping-a", "Camera", enabled = true)
+        composeRule.setFolderContent(
+            state = FolderAccessUiState(
+                mappings = listOf(mapping),
+                isLoading = false,
+                healthByMappingId = mapOf(
+                    mapping.id to FolderAccessHealth.PermissionMissing,
+                ),
+                scanStateByMappingId = mapOf(mapping.id to FolderScanUiState.NotStarted),
+            ),
+        )
+
+        composeRule.onNodeWithTag(FolderAccessTestTags.scanButton(mapping.id))
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(FolderAccessTestTags.repairButton(mapping.id))
+            .assertIsEnabled()
+        composeRule.onNodeWithTag(FolderAccessTestTags.removeButton(mapping.id))
+            .assertIsEnabled()
     }
 
     @Test
@@ -221,6 +382,9 @@ class FolderAccessScreenInstrumentedTest {
         onAddFolder: () -> Unit = {},
         onRepairFolder: (String) -> Unit = {},
         onRemoveFolder: (String) -> Unit = {},
+        onSetFolderEnabled: (String, Boolean) -> Unit = { _, _ -> },
+        onScanFolder: (String) -> Unit = {},
+        onCancelScan: (String) -> Unit = {},
     ) {
         setContent {
             VijiBackupTheme {
@@ -229,6 +393,9 @@ class FolderAccessScreenInstrumentedTest {
                     onAddFolder = onAddFolder,
                     onRepairFolder = onRepairFolder,
                     onRemoveFolder = onRemoveFolder,
+                    onSetFolderEnabled = onSetFolderEnabled,
+                    onScanFolder = onScanFolder,
+                    onCancelScan = onCancelScan,
                 )
             }
         }

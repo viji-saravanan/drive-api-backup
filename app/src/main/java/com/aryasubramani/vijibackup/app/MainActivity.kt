@@ -110,6 +110,9 @@ class MainActivity : ComponentActivity() {
                 onAddFolder = folderAccessViewModel::addFolder,
                 onRepairFolder = folderAccessViewModel::repairFolder,
                 onRemoveFolder = folderAccessViewModel::removeFolder,
+                onSetFolderEnabled = folderAccessViewModel::setFolderEnabled,
+                onScanFolder = folderAccessViewModel::scanFolder,
+                onCancelScan = folderAccessViewModel::cancelScan,
             )
         }
     }
