@@ -33,8 +33,9 @@ implemented Phase 3 local-folder slices are integrated on `main` through PRs
 #1-#4. Their implementation packets, architecture, failure matrix, security
 rules, source register, and physical-device acceptance matrix are committed
 alongside the code. The active completion branch now contains typed root-health
-validation; remaining Phase 3 scan, orchestration, controls, and live-acceptance
-work continues there until one reviewed PR is ready.
+validation and durable enablement behavior; remaining Phase 3 scan
+orchestration, controls, and live-acceptance work continues there until one
+reviewed PR is ready.
 
 Implemented Phase 2 slices:
 
@@ -83,13 +84,17 @@ Implemented Phase 3 slices:
 - typed live root health validation from exact persisted grants and one
   read-only root query, including provider authentication, explicit missing
   roots, temporary failures, cancellation, and terminal-state enforcement;
-- a variant-safe test-only provider manifest plus physical Samsung fault-path
-  coverage without source-content mutations.
+- durable idempotent enable/disable state with typed repository failures,
+  per-mapping generation ownership, independent concurrent updates, and no
+  health-validator or grant side effects;
+- a disabled, variant-safe test-only provider manifest plus physical Samsung
+  fault-path coverage without source-content mutations or test-process startup
+  crashes.
 
 Not yet implemented after the integrated Phase 3 slices:
 
 - iterative metadata scan, scan progress, cancellation, and per-mapping isolation;
-- enable/disable controls and scan controls;
+- enable/disable UI controls and scan controls;
 - Google Drive authorization or destination access;
 - any selected-folder sync behavior;
 - release signing or APK publication.
@@ -224,6 +229,18 @@ Additional Phase 3 root-health evidence on 2026-07-15:
 - no real root-health acceptance is claimed yet because both installed flavors
   currently have zero live mappings. The dedicated Samsung test tree and the
   full `FOLDER-LIVE-*` matrix remain mandatory before Phase 3 closure.
+
+Additional Phase 3 enablement evidence on 2026-07-15:
+
+- the missing enablement contract and presentation state were witnessed RED
+  before implementation;
+- the focused ViewModel suite passed on the JVM, while all 47 repository tests
+  passed directly on Samsung user 0;
+- all 29 validator tests and all 4 app-composition tests passed again after the
+  test provider was made disabled-by-default to prevent pre-instrumentation
+  classloader failure;
+- both-flavor JVM tests, app assembly, and Android-test APK assembly passed;
+- disabled-but-ready manual scan remains a Task 6 gate and is not yet claimed.
 
 ## Current Passing Checks
 

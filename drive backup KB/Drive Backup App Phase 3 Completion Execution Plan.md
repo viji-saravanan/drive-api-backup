@@ -199,9 +199,11 @@ missing-root exception or a valid empty root cursor is an explicit
 `TreeMissing` signal.
 
 The Task 2 provider foundation supports controlled root queries only. It lives
-in the test APK, uses a variant-safe authority, and records calls without raw
-identifiers. Task 5 extends the same provider with child traversal and blocking
-query controls.
+in the test APK, uses a variant-safe authority, remains disabled in the
+installed manifest so Android cannot initialize it before the instrumentation
+classloader is ready, and records calls without raw identifiers. Tests attach
+the provider directly through `ContentResolver.wrap`. Task 5 extends the same
+provider with child traversal and blocking query controls.
 
 - [x] Write failing tests for every health state, invalid tree, missing/multiple
   root row, wrong MIME/ID, missing columns, extras, null cursor, cancellation,
@@ -244,11 +246,24 @@ interface FolderMappingRepository {
 }
 ```
 
-- [ ] Write failing tests for true/false persistence, idempotence, missing row,
+- [x] Write failing tests for true/false persistence, idempotence, missing row,
   database failure, inactive presentation, and stale work after disable.
-- [ ] Implement the DAO-backed repository call and generation-safe ViewModel action.
-- [ ] Prove enabling does not change health and disabled-but-ready remains manually scannable.
-- [ ] Run focused repository and ViewModel suites.
+- [x] Implement the DAO-backed repository call and generation-safe ViewModel action.
+- [x] Prove enable/disable does not invoke health validation or grant work.
+- [ ] Prove disabled-but-ready remains manually scannable when Task 6 wires scan admission.
+- [x] Run focused repository and ViewModel suites.
+
+The repository persists idempotent enablement changes under the same mutation
+mutex used by add, repair, and remove. Presentation owns one generation-scoped
+job per mapping, permits independent mappings to update concurrently, and
+prevents cancelled or inactive work from clearing replacement progress or
+publishing stale notices. Compile RED was witnessed before the contract and
+implementation existed. The focused ViewModel suite passed on the JVM; all 47
+repository tests, all 29 root-validator tests, and all 4 app-composition tests
+passed on Samsung user 0. Both flavors passed complete JVM tests plus app and
+Android-test APK assembly. The disabled-but-ready scan condition remains an
+explicit Task 6 acceptance dependency rather than being inferred before a
+scanner exists.
 
 ## Task 4: Iterative Read-Only Metadata Scanner
 

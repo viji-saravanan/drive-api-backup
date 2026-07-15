@@ -36,15 +36,16 @@ Drive implementation.
 
 ## Implementation Checkpoint
 
-As of 2026-07-13, Room schema 1, durable picker correlation, read-only grant
+As of 2026-07-15, Room schema 1, durable picker correlation, read-only grant
 acquisition/reconciliation, add, repair, display-name resolution/backfill,
-confirmed removal, and the approved folder UI are implemented on the Phase 3
-branch. Process-scope approval survives Home, DocumentsUI, and activity
-recreation; a cold process still reauthenticates.
+confirmed removal, typed root health, and durable enablement orchestration are
+implemented on the Phase 3 completion branch. Process-scope approval survives
+Home, DocumentsUI, and activity recreation; a cold process still
+reauthenticates.
 
-Health classification, iterative scanning, scan cancellation, enable/disable,
-sign-out compensation for pending picker work, and the full restart/upgrade live
-matrix remain incomplete. Phase 3 must not be described as complete yet.
+Iterative scanning, scan cancellation, enable/disable controls, per-mapping scan
+orchestration, and the full restart/upgrade live matrix remain incomplete.
+Phase 3 must not be described as complete yet.
 
 ## Confirmed Product Inputs
 
