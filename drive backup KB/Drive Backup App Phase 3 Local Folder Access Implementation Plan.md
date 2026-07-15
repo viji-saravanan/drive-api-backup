@@ -395,13 +395,19 @@ Configuration, access health, and scan state are orthogonal.
 | `Checking` | Persisted grant and root are being verified |
 | `Ready` | Exact persisted read grant exists and root metadata is readable |
 | `PermissionMissing` | Persisted read grant is absent |
-| `TreeMissing` | Grant exists but selected root was moved or deleted |
+| `TreeMissing` | Grant exists and the provider explicitly confirms the selected root is absent |
 | `ProviderAuthRequired` | Provider reports its own authentication requirement |
 | `TemporarilyUnavailable` | Provider failed temporarily or returned null |
 
 Catch `AuthenticationRequiredException` before the broader `SecurityException`.
 Do not collapse provider authentication, absent app grant, missing tree, and
 temporary provider failure into one repair message.
+
+Do not infer `TreeMissing` from exception text. Android's standard
+`DocumentsProvider` query bridge can translate a provider
+`FileNotFoundException` into a null cursor. That indistinguishable result is
+`TemporarilyUnavailable`; a direct preserved missing-root signal or a valid
+empty root cursor is `TreeMissing`. Repair remains available in either state.
 
 | Scan state | Meaning |
 |---|---|

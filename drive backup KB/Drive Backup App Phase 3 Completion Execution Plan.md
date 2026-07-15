@@ -192,18 +192,33 @@ cursor or provider/malformed response is temporary; an absent root row is
 one fresh exact-grant check: a disappeared read grant is `PermissionMissing`,
 while a still-present grant is `TemporarilyUnavailable`. A provider-reported
 missing root is `TreeMissing`; it is never inferred only from exception text.
+Android's standard `DocumentsProvider` query bridge converts a provider
+`FileNotFoundException` into a null cursor, so that ambiguous framework path is
+temporary rather than falsely claiming the tree is gone. A direct preserved
+missing-root exception or a valid empty root cursor is an explicit
+`TreeMissing` signal.
 
 The Task 2 provider foundation supports controlled root queries only. It lives
 in the test APK, uses a variant-safe authority, and records calls without raw
 identifiers. Task 5 extends the same provider with child traversal and blocking
 query controls.
 
-- [ ] Write failing tests for every health state, invalid tree, missing/multiple
+- [x] Write failing tests for every health state, invalid tree, missing/multiple
   root row, wrong MIME/ID, missing columns, extras, null cursor, cancellation,
   and non-sensitive failure handling.
-- [ ] Implement the validator and repository mapping lookup.
-- [ ] Run focused SAF/repository tests and both-flavor compilation.
-- [ ] Review callers, DI bindings, API-24 compatibility, and provider-resource closure.
+- [x] Implement the validator and repository mapping lookup.
+- [x] Run focused SAF/repository tests and both-flavor compilation.
+- [x] Review callers, DI bindings, API-24 compatibility, and provider-resource closure.
+
+Completed on the active branch after witnessed compile/runtime RED cases. The
+Samsung user-0 validator suite passed 29 tests and the repository suite passed
+44 tests. Both flavors passed JVM tests, app assembly, Android-test compilation,
+and Android-test APK assembly. `Checking` is presentation-only and is rejected
+as a terminal repository result. The test-provider manifest uses a fully
+qualified class name and a variant-specific authority. API 24-28 execution of
+the in-process `ContentResolver.wrap` fault harness remains part of the deferred
+hardware matrix; production code is min-SDK-safe and the API-26 authentication
+type is isolated behind a guarded implementation.
 
 ## Task 3: Enable And Disable Configuration
 

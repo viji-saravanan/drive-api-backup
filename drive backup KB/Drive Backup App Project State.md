@@ -32,8 +32,9 @@ Phase 1 foundation, Phase 2 authentication, the public-source workflow, and the
 implemented Phase 3 local-folder slices are integrated on `main` through PRs
 #1-#4. Their implementation packets, architecture, failure matrix, security
 rules, source register, and physical-device acceptance matrix are committed
-alongside the code. Remaining Phase 3 health and scan work must begin from a new
-branch based on this integrated baseline.
+alongside the code. The active completion branch now contains typed root-health
+validation; remaining Phase 3 scan, orchestration, controls, and live-acceptance
+work continues there until one reviewed PR is ready.
 
 Implemented Phase 2 slices:
 
@@ -78,11 +79,15 @@ Implemented Phase 3 slices:
   failure;
 - per-launch picker callback identity that discards a retired pre-sign-out
   result without consuming a post-sign-in replacement, including activity
-  recreation.
+  recreation;
+- typed live root health validation from exact persisted grants and one
+  read-only root query, including provider authentication, explicit missing
+  roots, temporary failures, cancellation, and terminal-state enforcement;
+- a variant-safe test-only provider manifest plus physical Samsung fault-path
+  coverage without source-content mutations.
 
 Not yet implemented after the integrated Phase 3 slices:
 
-- live root health classification and permission-loss repair state;
 - iterative metadata scan, scan progress, cancellation, and per-mapping isolation;
 - enable/disable controls and scan controls;
 - Google Drive authorization or destination access;
@@ -208,6 +213,18 @@ Additional Phase 3 lifecycle evidence on 2026-07-15:
   state, composition, and auth UI suite passed directly on Samsung user 0;
 - both-flavor JVM tests, app and Android-test APK assembly, and lint passed.
 
+Additional Phase 3 root-health evidence on 2026-07-15:
+
+- the validator's compile and terminal-`Checking` cases were witnessed RED
+  before implementation;
+- 29 validator and 44 repository tests passed directly on Samsung user 0;
+- both-flavor JVM tests, app assembly, Android-test compilation, and
+  Android-test APK assembly passed;
+- the provider manifest check caught and fixed a class-name packaging defect;
+- no real root-health acceptance is claimed yet because both installed flavors
+  currently have zero live mappings. The dedicated Samsung test tree and the
+  full `FOLDER-LIVE-*` matrix remain mandatory before Phase 3 closure.
+
 ## Current Passing Checks
 
 ```bash
@@ -231,16 +248,16 @@ proving a clean checkout reaches the intended fail-closed setup state.
 
 ## Immediate Goal
 
-Complete Phase 3 health and read-only metadata scanning without weakening the
-tested process-scope auth boundary or claiming that Android's local-only picker
-hint proves physical locality.
+Complete Phase 3 read-only metadata scanning, per-mapping orchestration,
+controls, and live Samsung acceptance without weakening the tested
+process-scope auth boundary or claiming that Android's local-only picker hint
+proves physical locality.
 
 Next sequence:
 
-- finish live backfill acceptance for the two existing real mappings;
-- record one explicitly chosen live removal/re-add case without touching the
-  other mapping;
-- implement health, read-only scan, cancellation, and per-mapping isolation in
+- create one dedicated live test tree because both installed flavors currently
+  contain zero mappings, then capture its local-only mutation sentinel;
+- implement read-only scan, cancellation, and per-mapping isolation in
   red-green vertical slices without mutating source content;
 - run the full automated regression and every physical Samsung
   `FOLDER-LIVE-*` acceptance case;

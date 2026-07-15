@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-source-register
 status: active
-last_updated: 2026-07-13
+last_updated: 2026-07-15
 context_role: sources
 read_when:
   - The agent makes platform claims about Android, Google Drive, Gmail, Apps Script, GitHub, or security.
@@ -26,6 +26,7 @@ This register lists source-backed platform claims. Future agents must verify cur
 | Persisted URI permissions | https://developer.android.com/reference/android/content/ContentResolver | 2026-07-13 | Persisted grants can be enumerated, taken, and released by exact URI and read/write mode. A grant does not prove the tree still resolves. |
 | DocumentsContract traversal | https://developer.android.com/reference/android/provider/DocumentsContract | 2026-07-13 | Build tree-backed document and child URIs through the contract; document IDs remain provider identifiers, not filesystem paths. |
 | DocumentsProvider behavior | https://developer.android.com/reference/android/provider/DocumentsProvider | 2026-07-13 | Providers can return loading/error extras, null metadata, repeated documents under multiple parents, authentication failures, and cancellation-sensitive queries. |
+| AOSP DocumentsProvider query bridge | https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/java/android/provider/DocumentsProvider.java | 2026-07-15 | The framework query bridge catches a provider `FileNotFoundException` and returns a null cursor, so clients cannot safely classify that ambiguous path as a confirmed missing tree. |
 | Authentication-required provider state | https://developer.android.com/reference/android/app/AuthenticationRequiredException | 2026-07-13 | Provider authentication is a specialized `SecurityException` and must be classified before generic permission denial. |
 | DocumentFile traversal overhead | https://developer.android.com/reference/androidx/documentfile/provider/DocumentFile | 2026-07-13 | Direct `DocumentsContract` queries avoid the substantial overhead documented for `DocumentFile` traversal. |
 | Provider query cancellation | https://developer.android.com/reference/android/os/CancellationSignal | 2026-07-13 | Each blocking provider query can receive a cancellation signal connected to coroutine cancellation. |
