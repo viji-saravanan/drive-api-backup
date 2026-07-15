@@ -3,7 +3,6 @@ package com.aryasubramani.vijibackup.app
 import android.os.Bundle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,49 +11,91 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FolderPickerRequestStateInstrumentedTest {
     @Test
-    fun exactLaunchedTokenRoundTripsThroughActivityBundle() {
+    fun exactLaunchIdentityRoundTripsThroughActivityBundle() {
         val state = FolderPickerRequestState.restore(null)
         val bundle = Bundle()
 
-        assertTrue(state.stageForLaunch("opaque-request-token"))
+        val registration = checkNotNull(state.stageForLaunch("opaque-request-token"))
         state.saveTo(bundle)
         val restored = FolderPickerRequestState.restore(bundle)
 
         assertEquals("opaque-request-token", restored.currentToken)
+        assertEquals(registration.registryKey, restored.currentRegistryKey)
+        assertEquals(listOf(registration), restored.outstandingLaunches)
     }
 
     @Test
-    fun restoredTokenCannotBeOverwrittenByAnotherLaunchEvent() {
-        val bundle = Bundle().apply {
-            putString(FolderPickerRequestState.SAVED_TOKEN_KEY, "restored-token")
-        }
-        val state = FolderPickerRequestState.restore(bundle)
-
-        assertFalse(state.stageForLaunch("replacement-token"))
-        assertEquals("restored-token", state.currentToken)
-    }
-
-    @Test
-    fun onlyMatchingCompletionClearsCurrentToken() {
+    fun activeLaunchCannotBeOverwrittenByAnotherLaunchEvent() {
         val state = FolderPickerRequestState.restore(null)
-        assertTrue(state.stageForLaunch("current-token"))
+        val active = checkNotNull(state.stageForLaunch("active-token"))
 
-        assertFalse(state.clearIfMatching("stale-token"))
-        assertEquals("current-token", state.currentToken)
-        assertTrue(state.clearIfMatching("current-token"))
-        assertNull(state.currentToken)
+        assertNull(state.stageForLaunch("replacement-token"))
+        assertEquals("active-token", state.currentToken)
+        assertEquals(active.registryKey, state.currentRegistryKey)
     }
 
     @Test
-    fun blankOrWrongTypeSavedValueFailsClosed() {
-        val blank = Bundle().apply {
-            putString(FolderPickerRequestState.SAVED_TOKEN_KEY, " ")
+    fun retiredResultCannotConsumeOrClearReplacementLaunch() {
+        val state = FolderPickerRequestState.restore(null)
+        val retired = checkNotNull(state.stageForLaunch("retired-token"))
+
+        assertTrue(state.retireCurrent())
+        assertNull(state.currentToken)
+        val replacement = checkNotNull(state.stageForLaunch("replacement-token"))
+
+        assertNull(state.consumeResult(retired.registryKey))
+        assertEquals("replacement-token", state.currentToken)
+        assertEquals(replacement.registryKey, state.currentRegistryKey)
+        assertEquals("replacement-token", state.consumeResult(replacement.registryKey))
+        assertNull(state.currentToken)
+        assertNull(state.currentRegistryKey)
+    }
+
+    @Test
+    fun retiredAndReplacementLaunchesBothRoundTripWithoutChangingIdentity() {
+        val state = FolderPickerRequestState.restore(null)
+        val retired = checkNotNull(state.stageForLaunch("retired-token"))
+        assertTrue(state.retireCurrent())
+        val replacement = checkNotNull(state.stageForLaunch("replacement-token"))
+        val bundle = Bundle()
+
+        state.saveTo(bundle)
+        val restored = FolderPickerRequestState.restore(bundle)
+
+        assertEquals(listOf(retired, replacement), restored.outstandingLaunches)
+        assertNull(restored.consumeResult(retired.registryKey))
+        assertEquals("replacement-token", restored.currentToken)
+        assertEquals(replacement.registryKey, restored.currentRegistryKey)
+    }
+
+    @Test
+    fun unknownResultAndBlankTokenFailClosedWithoutChangingActiveLaunch() {
+        val state = FolderPickerRequestState.restore(null)
+        val active = checkNotNull(state.stageForLaunch("active-token"))
+
+        assertNull(state.stageForLaunch(" "))
+        assertNull(state.consumeResult("unknown-registry-key"))
+        assertEquals("active-token", state.currentToken)
+        assertEquals(active.registryKey, state.currentRegistryKey)
+    }
+
+    @Test
+    fun malformedSavedLaunchCollectionsFailClosed() {
+        val mismatched = Bundle().apply {
+            putStringArrayList(
+                FolderPickerRequestState.SAVED_REGISTRY_KEYS_KEY,
+                arrayListOf("registry-key"),
+            )
+            putStringArrayList(
+                FolderPickerRequestState.SAVED_REQUEST_TOKENS_KEY,
+                arrayListOf(),
+            )
         }
         val wrongType = Bundle().apply {
-            putLong(FolderPickerRequestState.SAVED_TOKEN_KEY, 42L)
+            putLong(FolderPickerRequestState.SAVED_REGISTRY_KEYS_KEY, 42L)
         }
 
-        assertNull(FolderPickerRequestState.restore(blank).currentToken)
+        assertTrue(FolderPickerRequestState.restore(mismatched).outstandingLaunches.isEmpty())
         assertNull(FolderPickerRequestState.restore(wrongType).currentToken)
     }
 }

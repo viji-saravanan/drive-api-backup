@@ -26,7 +26,6 @@ class AuthViewModel(
     private var nextOperationId = 0L
     private var activeSignIn: ActiveSignIn? = null
     private var retryAction: RetryAction? = null
-    private var pendingPickerCallbacksClosed = false
 
     val uiState: StateFlow<AuthUiState> = mutableUiState.asStateFlow()
 
@@ -74,7 +73,7 @@ class AuthViewModel(
             GoogleSignInResult.Cancelled -> restoreAfterSignIn(operation)
             GoogleSignInResult.NoCredential -> {
                 activeSignIn = null
-                beginSignOut(closePendingPickerCallbacks = false)
+                beginSignOut()
             }
             GoogleSignInResult.ConfigurationRequired -> {
                 activeSignIn = null
@@ -119,10 +118,8 @@ class AuthViewModel(
 
     fun signOut() {
         if (mutableUiState.value !is AuthUiState.Approved) return
-        beginSignOut(closePendingPickerCallbacks = true)
+        beginSignOut()
     }
-
-    fun shouldDiscardPendingPickerCallback(): Boolean = pendingPickerCallbacksClosed
 
     fun onAppBackgrounded() {
         // Approval is scoped to this ViewModel/process. A cold process still reloads as locked.
@@ -183,7 +180,6 @@ class AuthViewModel(
             mutableUiState.value = when (val authorization = sessionManager.authorize(result.account)) {
                 is AuthorizeAccountResult.Approved -> {
                     retryAction = null
-                    pendingPickerCallbacksClosed = false
                     AuthUiState.Approved(authorization.account)
                 }
                 is AuthorizeAccountResult.Blocked -> {
@@ -219,10 +215,7 @@ class AuthViewModel(
         mutableUiState.value = AuthUiState.Error(reason = reason)
     }
 
-    private fun beginSignOut(closePendingPickerCallbacks: Boolean) {
-        if (closePendingPickerCallbacks) {
-            pendingPickerCallbacksClosed = true
-        }
+    private fun beginSignOut() {
         retryAction = null
         mutableUiState.value = AuthUiState.SigningOut
         viewModelScope.launch {
@@ -256,7 +249,7 @@ class AuthViewModel(
 
     private fun signOutFromError() {
         if (mutableUiState.value !is AuthUiState.Error) return
-        beginSignOut(closePendingPickerCallbacks = pendingPickerCallbacksClosed)
+        beginSignOut()
     }
 
     class Factory(

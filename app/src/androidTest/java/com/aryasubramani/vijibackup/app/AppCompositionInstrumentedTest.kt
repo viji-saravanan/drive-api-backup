@@ -192,16 +192,34 @@ class AppCompositionInstrumentedTest {
                 composeRule.onNodeWithTag(AuthTestTags.SignInButton).performClick()
                 composeRule.waitForIdle()
 
+                var retiredRegistryKey: String? = null
                 scenario.onActivity { activity ->
-                    activity.stageFolderPickerRequestTokenForTesting("pending-token")
+                    assertTrue(activity.stageFolderPickerRequestTokenForTesting("pending-token"))
+                    retiredRegistryKey = activity.currentFolderPickerRegistryKeyForTesting
                 }
 
                 composeRule.onNodeWithTag(AuthTestTags.SignOutButton).performClick()
                 composeRule.waitForIdle()
 
+                scenario.recreate()
+                composeRule.waitForIdle()
+
+                composeRule.onNodeWithTag(AuthTestTags.SignInButton).performClick()
+                composeRule.waitForIdle()
+
+                var replacementRegistryKey: String? = null
+                scenario.onActivity { activity ->
+                    assertTrue(
+                        activity.stageFolderPickerRequestTokenForTesting("replacement-token")
+                    )
+                    replacementRegistryKey = activity.currentFolderPickerRegistryKeyForTesting
+                    assertTrue(replacementRegistryKey != retiredRegistryKey)
+                }
+
                 scenario.onActivity { activity ->
                     activity.deliverFolderPickerResultForTesting(
-                        FolderPickerResult.Selected(
+                        registryKey = checkNotNull(retiredRegistryKey),
+                        result = FolderPickerResult.Selected(
                             treeUri = Uri.parse("content://provider.test/tree/late"),
                             grantedFlags =
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -211,11 +229,35 @@ class AppCompositionInstrumentedTest {
                 }
                 composeRule.waitForIdle()
 
-                assertEquals(listOf(GoogleSignInMode.Explicit), signInModes)
+                assertEquals(
+                    listOf(GoogleSignInMode.Explicit, GoogleSignInMode.Explicit),
+                    signInModes,
+                )
                 assertEquals(1, folderRepository.prepareForSignOutCalls)
                 assertTrue(folderRepository.completionCalls.isEmpty())
                 scenario.onActivity { activity ->
+                    assertEquals(
+                        "replacement-token",
+                        activity.currentFolderPickerRequestTokenForTesting,
+                    )
+                    assertEquals(
+                        replacementRegistryKey,
+                        activity.currentFolderPickerRegistryKeyForTesting,
+                    )
+                    activity.deliverFolderPickerResultForTesting(
+                        registryKey = checkNotNull(replacementRegistryKey),
+                        result = FolderPickerResult.Cancelled,
+                    )
+                }
+                composeRule.waitForIdle()
+
+                assertEquals(
+                    listOf("replacement-token" to FolderPickerSelection.Cancelled),
+                    folderRepository.completionCalls,
+                )
+                scenario.onActivity { activity ->
                     assertNull(activity.currentFolderPickerRequestTokenForTesting)
+                    assertNull(activity.currentFolderPickerRegistryKeyForTesting)
                 }
             }
         } finally {

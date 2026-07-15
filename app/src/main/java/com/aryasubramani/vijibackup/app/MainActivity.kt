@@ -3,10 +3,13 @@ package com.aryasubramani.vijibackup.app
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +28,12 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var folderPickerRequestState: FolderPickerRequestState
+    private val folderPickerContract = ReadOnlyOpenDocumentTreeContract()
+    private val folderPickerLaunchers = mutableMapOf<
+        String,
+        ActivityResultLauncher<ReadOnlyFolderPickerRequest>,
+    >()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     @VisibleForTesting
     internal var protectedWindowPolicyAppliedForTesting = false
@@ -43,10 +52,6 @@ class MainActivity : ComponentActivity() {
     private val folderAccessViewModel by viewModels<FolderAccessViewModel> {
         FolderAccessViewModel.Factory(appContainer.folderMappingRepository)
     }
-    private val folderPickerLauncher = registerForActivityResult(
-        ReadOnlyOpenDocumentTreeContract(),
-        ::handleFolderPickerResult
-    )
     private val credentialRequestDispatcher by lazy(LazyThreadSafetyMode.NONE) {
         AuthCredentialRequestDispatcher(
             coroutineScope = lifecycleScope,
@@ -64,6 +69,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         folderPickerRequestState = FolderPickerRequestState.restore(savedInstanceState)
         super.onCreate(savedInstanceState)
+        folderPickerRequestState.outstandingLaunches.forEach(::registerFolderPicker)
         applyProtectedWindowPolicy()
         enableEdgeToEdge()
         setContent {
@@ -100,7 +106,7 @@ class MainActivity : ComponentActivity() {
                 folderAccessUiState = folderAccessUiState,
                 onSignIn = authViewModel::signIn,
                 onRetry = authViewModel::retry,
-                onSignOut = authViewModel::signOut,
+                onSignOut = ::signOut,
                 onAddFolder = folderAccessViewModel::addFolder,
                 onRepairFolder = folderAccessViewModel::repairFolder,
                 onRemoveFolder = folderAccessViewModel::removeFolder,
@@ -125,8 +131,14 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
+    override fun onDestroy() {
+        folderPickerLaunchers.values.forEach(ActivityResultLauncher<*>::unregister)
+        folderPickerLaunchers.clear()
+        super.onDestroy()
+    }
+
     private fun launchFolderPicker(request: FolderPickerLaunch) {
-        if (!folderPickerRequestState.stageForLaunch(request.requestToken)) return
+        val registration = folderPickerRequestState.stageForLaunch(request.requestToken) ?: return
         val initialUri = request.initialTreeUri?.let { rawUri ->
             try {
                 Uri.parse(rawUri)
@@ -134,36 +146,78 @@ class MainActivity : ComponentActivity() {
                 null
             }
         }
-        folderPickerLauncher.launch(ReadOnlyFolderPickerRequest(initialUri = initialUri))
+        val launcher = registerFolderPicker(registration)
+        try {
+            launcher.launch(ReadOnlyFolderPickerRequest(initialUri = initialUri))
+        } catch (_: Exception) {
+            folderPickerLaunchers.remove(registration.registryKey)?.unregister()
+            val requestToken = folderPickerRequestState.consumeResult(registration.registryKey)
+                ?: return
+            completeFolderPicker(requestToken, FolderPickerResult.Cancelled)
+        }
     }
 
-    private fun handleFolderPickerResult(result: FolderPickerResult) {
-        val requestToken = folderPickerRequestState.currentToken ?: return
-        if (authViewModel.shouldDiscardPendingPickerCallback()) {
-            folderPickerRequestState.clearIfMatching(requestToken)
-            return
+    private fun registerFolderPicker(
+        registration: FolderPickerLaunchRegistration,
+    ): ActivityResultLauncher<ReadOnlyFolderPickerRequest> {
+        folderPickerLaunchers[registration.registryKey]?.let { return it }
+        val launcher = activityResultRegistry.register(
+            registration.registryKey,
+            folderPickerContract,
+        ) { result ->
+            handleFolderPickerResult(registration.registryKey, result)
         }
+        if (folderPickerRequestState.hasLaunch(registration.registryKey)) {
+            folderPickerLaunchers[registration.registryKey] = launcher
+        } else {
+            launcher.unregister()
+        }
+        return launcher
+    }
+
+    private fun handleFolderPickerResult(registryKey: String, result: FolderPickerResult) {
+        val requestToken = folderPickerRequestState.consumeResult(registryKey)
+        folderPickerLaunchers.remove(registryKey)?.let { launcher ->
+            // ActivityResultRegistry removes its in-flight marker after this callback returns.
+            mainHandler.post(launcher::unregister)
+        }
+        if (requestToken == null) return
+        completeFolderPicker(requestToken, result)
+    }
+
+    private fun completeFolderPicker(requestToken: String, result: FolderPickerResult) {
         lifecycleScope.launch {
             folderAccessViewModel.completePicker(
                 requestToken = requestToken,
                 selection = result.toDomainSelection(),
             )
-            folderPickerRequestState.clearIfMatching(requestToken)
         }
+    }
+
+    private fun signOut() {
+        folderPickerRequestState.retireCurrent()
+        authViewModel.signOut()
     }
 
     @VisibleForTesting
     internal fun stageFolderPickerRequestTokenForTesting(requestToken: String): Boolean =
-        folderPickerRequestState.stageForLaunch(requestToken)
+        folderPickerRequestState.stageForLaunch(requestToken) != null
 
     @VisibleForTesting
-    internal fun deliverFolderPickerResultForTesting(result: FolderPickerResult) {
-        handleFolderPickerResult(result)
+    internal fun deliverFolderPickerResultForTesting(
+        registryKey: String,
+        result: FolderPickerResult,
+    ) {
+        handleFolderPickerResult(registryKey, result)
     }
 
     @VisibleForTesting
     internal val currentFolderPickerRequestTokenForTesting: String?
         get() = folderPickerRequestState.currentToken
+
+    @VisibleForTesting
+    internal val currentFolderPickerRegistryKeyForTesting: String?
+        get() = folderPickerRequestState.currentRegistryKey
 
     private fun applyProtectedWindowPolicy() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
