@@ -50,6 +50,11 @@ sealed interface RemoveFolderResult {
     data object StorageFailure : RemoveFolderResult
 }
 
+enum class PendingFolderCleanupResult {
+    Complete,
+    RetryRequired,
+}
+
 interface FolderMappingRepository {
     fun observeMappings(): Flow<List<FolderMapping>>
     suspend fun beginAdd(): BeginFolderPickerResult
@@ -58,6 +63,8 @@ interface FolderMappingRepository {
         requestToken: String,
         selection: FolderPickerSelection,
     ): FolderPickerCompletion
+
+    suspend fun prepareForSignOut(): PendingFolderCleanupResult
 
     suspend fun remove(mappingId: String): RemoveFolderResult
 }

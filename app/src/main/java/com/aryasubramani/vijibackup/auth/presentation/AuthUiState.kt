@@ -48,5 +48,6 @@ enum class AuthError {
 
 enum class AuthWarning {
     ProviderStateNotCleared,
+    SignOutCleanupIncomplete,
     BlockedCleanupIncomplete,
 }

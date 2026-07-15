@@ -23,6 +23,7 @@
     <string name="auth_error_invalid_credential">Google returned an invalid account credential.</string>
     <string name="auth_error_unknown">Google sign-in could not be completed.</string>
     <string name="auth_warning_provider_state">The local session was cleared, but the Google account chooser could not be reset.</string>
+    <string name="auth_warning_sign_out_cleanup">Signed out, but some local cleanup could not finish and will be retried.</string>
     <string name="auth_warning_blocked_cleanup">Access remains blocked. Some account state could not be cleared.</string>
     <string name="auth_sign_in_action">Sign in with Google</string>
     <string name="auth_choose_account_action">Choose another account</string>

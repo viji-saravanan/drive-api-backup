@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
         AuthViewModel.Factory(
             sessionManager = appContainer.authSessionManager,
             isGoogleSignInConfigured = appContainer.isGoogleSignInConfigured,
+            prepareForSignOut = appContainer.folderMappingRepository::prepareForSignOut,
         )
     }
     private val folderAccessViewModel by viewModels<FolderAccessViewModel> {
@@ -44,17 +45,8 @@ class MainActivity : ComponentActivity() {
     }
     private val folderPickerLauncher = registerForActivityResult(
         ReadOnlyOpenDocumentTreeContract(),
-    ) { result ->
-        val requestToken = folderPickerRequestState.currentToken
-            ?: return@registerForActivityResult
-        lifecycleScope.launch {
-            folderAccessViewModel.completePicker(
-                requestToken = requestToken,
-                selection = result.toDomainSelection(),
-            )
-            folderPickerRequestState.clearIfMatching(requestToken)
-        }
-    }
+        ::handleFolderPickerResult
+    )
     private val credentialRequestDispatcher by lazy(LazyThreadSafetyMode.NONE) {
         AuthCredentialRequestDispatcher(
             coroutineScope = lifecycleScope,
@@ -144,6 +136,34 @@ class MainActivity : ComponentActivity() {
         }
         folderPickerLauncher.launch(ReadOnlyFolderPickerRequest(initialUri = initialUri))
     }
+
+    private fun handleFolderPickerResult(result: FolderPickerResult) {
+        val requestToken = folderPickerRequestState.currentToken ?: return
+        if (authViewModel.shouldDiscardPendingPickerCallback()) {
+            folderPickerRequestState.clearIfMatching(requestToken)
+            return
+        }
+        lifecycleScope.launch {
+            folderAccessViewModel.completePicker(
+                requestToken = requestToken,
+                selection = result.toDomainSelection(),
+            )
+            folderPickerRequestState.clearIfMatching(requestToken)
+        }
+    }
+
+    @VisibleForTesting
+    internal fun stageFolderPickerRequestTokenForTesting(requestToken: String): Boolean =
+        folderPickerRequestState.stageForLaunch(requestToken)
+
+    @VisibleForTesting
+    internal fun deliverFolderPickerResultForTesting(result: FolderPickerResult) {
+        handleFolderPickerResult(result)
+    }
+
+    @VisibleForTesting
+    internal val currentFolderPickerRequestTokenForTesting: String?
+        get() = folderPickerRequestState.currentToken
 
     private fun applyProtectedWindowPolicy() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

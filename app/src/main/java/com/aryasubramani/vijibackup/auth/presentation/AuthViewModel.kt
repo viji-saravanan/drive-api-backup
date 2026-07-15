@@ -9,6 +9,8 @@ import com.aryasubramani.vijibackup.auth.data.LoadAuthSessionResult
 import com.aryasubramani.vijibackup.auth.data.SignOutResult
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInMode
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInResult
+import com.aryasubramani.vijibackup.folderaccess.domain.PendingFolderCleanupResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,11 +19,14 @@ import kotlinx.coroutines.launch
 class AuthViewModel(
     private val sessionManager: AuthSessionManager,
     private val isGoogleSignInConfigured: Boolean,
+    private val prepareForSignOut: suspend () -> PendingFolderCleanupResult =
+        { PendingFolderCleanupResult.Complete },
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow<AuthUiState>(AuthUiState.Initializing)
     private var nextOperationId = 0L
     private var activeSignIn: ActiveSignIn? = null
     private var retryAction: RetryAction? = null
+    private var pendingPickerCallbacksClosed = false
 
     val uiState: StateFlow<AuthUiState> = mutableUiState.asStateFlow()
 
@@ -69,7 +74,7 @@ class AuthViewModel(
             GoogleSignInResult.Cancelled -> restoreAfterSignIn(operation)
             GoogleSignInResult.NoCredential -> {
                 activeSignIn = null
-                beginSignOut()
+                beginSignOut(closePendingPickerCallbacks = false)
             }
             GoogleSignInResult.ConfigurationRequired -> {
                 activeSignIn = null
@@ -114,8 +119,10 @@ class AuthViewModel(
 
     fun signOut() {
         if (mutableUiState.value !is AuthUiState.Approved) return
-        beginSignOut()
+        beginSignOut(closePendingPickerCallbacks = true)
     }
+
+    fun shouldDiscardPendingPickerCallback(): Boolean = pendingPickerCallbacksClosed
 
     fun onAppBackgrounded() {
         // Approval is scoped to this ViewModel/process. A cold process still reloads as locked.
@@ -176,6 +183,7 @@ class AuthViewModel(
             mutableUiState.value = when (val authorization = sessionManager.authorize(result.account)) {
                 is AuthorizeAccountResult.Approved -> {
                     retryAction = null
+                    pendingPickerCallbacksClosed = false
                     AuthUiState.Approved(authorization.account)
                 }
                 is AuthorizeAccountResult.Blocked -> {
@@ -211,18 +219,30 @@ class AuthViewModel(
         mutableUiState.value = AuthUiState.Error(reason = reason)
     }
 
-    private fun beginSignOut() {
+    private fun beginSignOut(closePendingPickerCallbacks: Boolean) {
+        if (closePendingPickerCallbacks) {
+            pendingPickerCallbacksClosed = true
+        }
         retryAction = null
         mutableUiState.value = AuthUiState.SigningOut
         viewModelScope.launch {
+            val pendingPickerCleanupIncomplete = try {
+                prepareForSignOut() == PendingFolderCleanupResult.RetryRequired
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                true
+            }
             mutableUiState.value = when (val result = sessionManager.signOut()) {
                 is SignOutResult.SignedOut -> {
                     retryAction = null
                     AuthUiState.SignedOut(
-                        warning = if (result.providerStateCleared) {
-                            null
-                        } else {
-                            AuthWarning.ProviderStateNotCleared
+                        warning = when {
+                            pendingPickerCleanupIncomplete ->
+                                AuthWarning.SignOutCleanupIncomplete
+                            !result.providerStateCleared ->
+                                AuthWarning.ProviderStateNotCleared
+                            else -> null
                         },
                     )
                 }
@@ -236,12 +256,14 @@ class AuthViewModel(
 
     private fun signOutFromError() {
         if (mutableUiState.value !is AuthUiState.Error) return
-        beginSignOut()
+        beginSignOut(closePendingPickerCallbacks = pendingPickerCallbacksClosed)
     }
 
     class Factory(
         private val sessionManager: AuthSessionManager,
         private val isGoogleSignInConfigured: Boolean,
+        private val prepareForSignOut: suspend () -> PendingFolderCleanupResult =
+            { PendingFolderCleanupResult.Complete },
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -251,6 +273,7 @@ class AuthViewModel(
             return AuthViewModel(
                 sessionManager = sessionManager,
                 isGoogleSignInConfigured = isGoogleSignInConfigured,
+                prepareForSignOut = prepareForSignOut,
             ) as T
         }
     }

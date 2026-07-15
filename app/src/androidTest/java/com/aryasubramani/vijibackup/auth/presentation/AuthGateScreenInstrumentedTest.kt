@@ -171,6 +171,12 @@ class AuthGateScreenInstrumentedTest {
                 appString(R.string.auth_warning_provider_state),
             ),
             StateTextExpectation(
+                AuthUiState.SignedOut(AuthWarning.SignOutCleanupIncomplete),
+                appString(R.string.auth_signed_out_title),
+                appString(R.string.auth_signed_out_message),
+                appString(R.string.auth_warning_sign_out_cleanup),
+            ),
+            StateTextExpectation(
                 AuthUiState.ReauthenticationRequired(account, automaticAttemptPending = false),
                 appString(R.string.auth_reauthentication_title),
                 appString(R.string.auth_reauthentication_message, account.email),
@@ -242,6 +248,23 @@ class AuthGateScreenInstrumentedTest {
             .performClick()
 
         assertTrue(signInRequested)
+    }
+
+    @Test
+    fun signedOutCleanupWarningUsesGenericNonSensitiveMessage() {
+        composeRule.setContent {
+            VijiBackupApp(
+                uiState = AuthUiState.SignedOut(AuthWarning.SignOutCleanupIncomplete),
+                onSignIn = {},
+                onRetry = {},
+                onSignOut = {},
+            )
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(AuthTestTags.Warning)
+            .assertIsDisplayed()
+            .assertTextEquals(appString(R.string.auth_warning_sign_out_cleanup))
     }
 
     @Test

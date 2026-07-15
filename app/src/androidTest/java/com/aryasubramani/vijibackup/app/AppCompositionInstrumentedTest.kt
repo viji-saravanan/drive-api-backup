@@ -1,5 +1,7 @@
 package com.aryasubramani.vijibackup.app
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -28,12 +30,15 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
+import com.aryasubramani.vijibackup.folderaccess.domain.PendingFolderCleanupResult
 import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessTestTags
+import com.aryasubramani.vijibackup.folderaccess.saf.FolderPickerResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -159,11 +164,71 @@ class AppCompositionInstrumentedTest {
             application.testAppContainer = null
         }
     }
+
+    @Test
+    fun mainActivityDiscardsPickerCallbackAfterExplicitSignOut() {
+        val application = ApplicationProvider.getApplicationContext<VijiBackupApplication>()
+        val account = approvedAccount()
+        val signInModes = mutableListOf<GoogleSignInMode>()
+        val folderRepository = EmptyFolderMappingRepository()
+        val fakeContainer = object : AppContainer {
+            override val authSessionManager = AuthSessionManager(
+                accessPolicy = AccountAccessPolicy(setOf(account.email)),
+                sessionStore = InMemoryAuthSessionStore(),
+                credentialStateClearer = CredentialStateClearer {},
+            )
+            override val googleSignInClient = GoogleSignInClient { _, mode ->
+                signInModes += mode
+                GoogleSignInResult.Success(account)
+            }
+            override val folderMappingRepository = folderRepository
+            override val isGoogleSignInConfigured = true
+        }
+        application.testAppContainer = fakeContainer
+
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                composeRule.waitForIdle()
+                composeRule.onNodeWithTag(AuthTestTags.SignInButton).performClick()
+                composeRule.waitForIdle()
+
+                scenario.onActivity { activity ->
+                    activity.stageFolderPickerRequestTokenForTesting("pending-token")
+                }
+
+                composeRule.onNodeWithTag(AuthTestTags.SignOutButton).performClick()
+                composeRule.waitForIdle()
+
+                scenario.onActivity { activity ->
+                    activity.deliverFolderPickerResultForTesting(
+                        FolderPickerResult.Selected(
+                            treeUri = Uri.parse("content://provider.test/tree/late"),
+                            grantedFlags =
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+                        ),
+                    )
+                }
+                composeRule.waitForIdle()
+
+                assertEquals(listOf(GoogleSignInMode.Explicit), signInModes)
+                assertEquals(1, folderRepository.prepareForSignOutCalls)
+                assertTrue(folderRepository.completionCalls.isEmpty())
+                scenario.onActivity { activity ->
+                    assertNull(activity.currentFolderPickerRequestTokenForTesting)
+                }
+            }
+        } finally {
+            application.testAppContainer = null
+        }
+    }
 }
 
 private class EmptyFolderMappingRepository : FolderMappingRepository {
     private val mappings = MutableStateFlow(emptyList<FolderMapping>())
     var observeCalls = 0
+    var prepareForSignOutCalls = 0
+    val completionCalls = mutableListOf<Pair<String, FolderPickerSelection>>()
 
     override fun observeMappings(): Flow<List<FolderMapping>> {
         observeCalls += 1
@@ -179,7 +244,15 @@ private class EmptyFolderMappingRepository : FolderMappingRepository {
     override suspend fun completePicker(
         requestToken: String,
         selection: FolderPickerSelection,
-    ): FolderPickerCompletion = FolderPickerCompletion.StorageFailure
+    ): FolderPickerCompletion {
+        completionCalls += requestToken to selection
+        return FolderPickerCompletion.StorageFailure
+    }
+
+    override suspend fun prepareForSignOut(): PendingFolderCleanupResult {
+        prepareForSignOutCalls += 1
+        return PendingFolderCleanupResult.Complete
+    }
 
     override suspend fun remove(mappingId: String): RemoveFolderResult =
         RemoveFolderResult.StorageFailure

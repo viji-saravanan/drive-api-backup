@@ -175,6 +175,7 @@ internal fun AuthStatusContent(
 private fun AuthWarning.warningText(): String = stringResource(
     when (this) {
         AuthWarning.ProviderStateNotCleared -> R.string.auth_warning_provider_state
+        AuthWarning.SignOutCleanupIncomplete -> R.string.auth_warning_sign_out_cleanup
         AuthWarning.BlockedCleanupIncomplete -> R.string.auth_warning_blocked_cleanup
     },
 )

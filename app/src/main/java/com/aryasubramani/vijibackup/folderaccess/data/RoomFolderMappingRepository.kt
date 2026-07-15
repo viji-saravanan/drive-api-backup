@@ -15,6 +15,7 @@ import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerLaunch
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
 import com.aryasubramani.vijibackup.folderaccess.domain.LocalFolderMetadataReader
+import com.aryasubramani.vijibackup.folderaccess.domain.PendingFolderCleanupResult
 import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.saf.AcquireReadGrantResult
 import com.aryasubramani.vijibackup.folderaccess.saf.GrantReleaseResult
@@ -127,6 +128,24 @@ class RoomFolderMappingRepository(
         }
     }
 
+    override suspend fun prepareForSignOut(): PendingFolderCleanupResult = withContext(ioDispatcher) {
+        operationMutex.withLock {
+            try {
+                preparePendingCleanupForSignOut().also { result ->
+                    if (result == PendingFolderCleanupResult.RetryRequired) {
+                        initialized.set(false)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                initialized.set(false)
+                throw cancelled
+            } catch (_: Exception) {
+                initialized.set(false)
+                PendingFolderCleanupResult.RetryRequired
+            }
+        }
+    }
+
     private suspend fun beginOperation(
         operation: PendingFolderOperationType,
         targetMappingId: String?,
@@ -150,6 +169,31 @@ class RoomFolderMappingRepository(
             )
         } else {
             BeginFolderPickerResult.Busy
+        }
+    }
+
+    private suspend fun preparePendingCleanupForSignOut(): PendingFolderCleanupResult {
+        val pending = dao.pendingOperation() ?: return PendingFolderCleanupResult.Complete
+        if (pending.state != PendingFolderOperationState.Abandoning &&
+            dao.markPendingAbandoning(pending.requestToken) != 1
+        ) {
+            return PendingFolderCleanupResult.RetryRequired
+        }
+
+        val selectedTreeUri = pending.selectedTreeUri
+        if (selectedTreeUri != null &&
+            dao.mappingByTreeUri(selectedTreeUri) == null &&
+            grantManager.persistedGrants().any { it.treeUri == selectedTreeUri }
+        ) {
+            if (grantManager.releaseGrant(selectedTreeUri) != GrantReleaseResult.Released) {
+                return PendingFolderCleanupResult.RetryRequired
+            }
+        }
+
+        return if (dao.deleteAbandoningOperation(pending.requestToken) == 1) {
+            PendingFolderCleanupResult.Complete
+        } else {
+            PendingFolderCleanupResult.RetryRequired
         }
     }
 

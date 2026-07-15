@@ -14,12 +14,15 @@ import com.aryasubramani.vijibackup.folderaccess.domain.BeginFolderPickerResult
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerCompletion
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderPickerSelection
 import com.aryasubramani.vijibackup.folderaccess.domain.LocalFolderMetadataReader
+import com.aryasubramani.vijibackup.folderaccess.domain.PendingFolderCleanupResult
 import com.aryasubramani.vijibackup.folderaccess.domain.RemoveFolderResult
 import com.aryasubramani.vijibackup.folderaccess.saf.AcquireReadGrantResult
 import com.aryasubramani.vijibackup.folderaccess.saf.GrantReleaseResult
 import com.aryasubramani.vijibackup.folderaccess.saf.LocalFolderGrantManager
 import com.aryasubramani.vijibackup.folderaccess.saf.PersistedFolderGrant
 import com.aryasubramani.vijibackup.folderaccess.saf.WriteGrantRemovalResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -315,6 +318,161 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         assertEquals(1, grants.acquireCalls.size)
         assertNull(database.folderAccessDao().pendingOperation())
         assertEquals(1, database.folderAccessDao().observeMappings().first().size)
+    }
+
+    @Test
+    fun prepareForSignOutClearsRequestedPendingOperationWithoutGrantSideEffects() = runTest {
+        insertPending(operation = PendingFolderOperationType.Add)
+
+        assertEquals(PendingFolderCleanupResult.Complete, repository.prepareForSignOut())
+
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertTrue(grants.releaseCalls.isEmpty())
+        assertTrue(database.folderAccessDao().observeMappings().first().isEmpty())
+    }
+
+    @Test
+    fun prepareForSignOutReleasesStagedSelectionAndClearsPendingState() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-staged"
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+
+        assertEquals(PendingFolderCleanupResult.Complete, repository.prepareForSignOut())
+
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertEquals(listOf(treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun prepareForSignOutRetainsSameUriRepairGrantWhileClearingPendingState() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-same-uri"
+        database.folderAccessDao().insertMapping(mapping("existing-mapping", treeUri))
+        insertPending(
+            operation = PendingFolderOperationType.Repair,
+            targetMappingId = "existing-mapping",
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+
+        assertEquals(PendingFolderCleanupResult.Complete, repository.prepareForSignOut())
+
+        assertEquals(treeUri, database.folderAccessDao().mappingById("existing-mapping")?.treeUri)
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertTrue(grants.releaseCalls.isEmpty())
+    }
+
+    @Test
+    fun prepareForSignOutReturnsRetryRequiredWhenGrantReleaseCannotBeVerified() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-release-failure"
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseResult = GrantReleaseResult.Failed
+
+        assertEquals(PendingFolderCleanupResult.RetryRequired, repository.prepareForSignOut())
+
+        val pending = requireNotNull(database.folderAccessDao().pendingOperation())
+        assertEquals(PendingFolderOperationState.Abandoning, pending.state)
+        assertEquals(treeUri, pending.selectedTreeUri)
+        assertEquals(listOf(treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun prepareForSignOutPropagatesCancellationAndLeavesCleanupRetryable() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-cancelled"
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseFailure = CancellationException("test cancellation")
+        var cancellation: CancellationException? = null
+
+        try {
+            repository.prepareForSignOut()
+        } catch (error: CancellationException) {
+            cancellation = error
+        }
+
+        assertTrue("Expected sign-out cleanup cancellation", cancellation != null)
+        val pending = requireNotNull(database.folderAccessDao().pendingOperation())
+        assertEquals(PendingFolderOperationState.Abandoning, pending.state)
+        assertEquals(treeUri, pending.selectedTreeUri)
+
+        grants.releaseFailure = null
+        assertEquals(PendingFolderCleanupResult.Complete, repository.prepareForSignOut())
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertEquals(listOf(treeUri, treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun prepareForSignOutRetriesAbandoningCleanupUntilReleaseSucceeds() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-retry"
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseResult = GrantReleaseResult.Failed
+
+        assertEquals(PendingFolderCleanupResult.RetryRequired, repository.prepareForSignOut())
+
+        grants.releaseResult = GrantReleaseResult.Released
+        assertEquals(PendingFolderCleanupResult.Complete, repository.prepareForSignOut())
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertEquals(listOf(treeUri, treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun retryRequiredSignOutCleanupIsRetriedByNextObservationWithoutAnotherPrepareCall() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-observe-retry"
+        repository.observeMappings().first()
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseResult = GrantReleaseResult.Failed
+
+        assertEquals(PendingFolderCleanupResult.RetryRequired, repository.prepareForSignOut())
+
+        grants.releaseResult = GrantReleaseResult.Released
+        assertTrue(repository.observeMappings().first().isEmpty())
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertEquals(listOf(treeUri, treeUri), grants.releaseCalls)
+    }
+
+    @Test
+    fun prepareForSignOutWinsConcurrentCallbackAndLeavesLateCompletionStale() = runTest {
+        val treeUri = "content://provider.test/tree/sign-out-race"
+        insertPending(
+            operation = PendingFolderOperationType.Add,
+            selectedTreeUri = treeUri,
+        )
+        grants.persisted = listOf(readGrant(treeUri))
+        grants.releaseStarted = CompletableDeferred()
+        grants.releaseGate = CompletableDeferred()
+
+        val signOut = async { repository.prepareForSignOut() }
+        grants.releaseStarted?.await()
+        val completion = async {
+            repository.completePicker(
+                requestToken = "pending-token",
+                selection = selected(treeUri),
+            )
+        }
+
+        grants.releaseGate?.complete(Unit)
+
+        assertEquals(PendingFolderCleanupResult.Complete, signOut.await())
+        assertEquals(FolderPickerCompletion.Stale, completion.await())
+        assertNull(database.folderAccessDao().pendingOperation())
+        assertTrue(database.folderAccessDao().observeMappings().first().isEmpty())
     }
 
     @Test
@@ -694,6 +852,8 @@ private class RecordingGrantManager : LocalFolderGrantManager {
     var persistedGrantReads = 0
     var persistedFailure: Throwable? = null
     var releaseFailure: Throwable? = null
+    var releaseStarted: CompletableDeferred<Unit>? = null
+    var releaseGate: CompletableDeferred<Unit>? = null
 
     override suspend fun persistedGrants(): List<PersistedFolderGrant> {
         persistedGrantReads += 1
@@ -719,6 +879,8 @@ private class RecordingGrantManager : LocalFolderGrantManager {
 
     override suspend fun releaseGrant(treeUri: String): GrantReleaseResult {
         releaseCalls += treeUri
+        releaseStarted?.complete(Unit)
+        releaseGate?.await()
         releaseFailure?.let { throw it }
         return releaseResult
     }

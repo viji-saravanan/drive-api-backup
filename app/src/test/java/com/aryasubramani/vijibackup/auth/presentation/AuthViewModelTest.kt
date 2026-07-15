@@ -7,6 +7,7 @@ import com.aryasubramani.vijibackup.auth.domain.AccountAccessPolicy
 import com.aryasubramani.vijibackup.auth.domain.GoogleAccount
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInMode
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInResult
+import com.aryasubramani.vijibackup.folderaccess.domain.PendingFolderCleanupResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -595,6 +596,77 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun signOutRunsPendingPickerCleanupBeforeAuthClear() = runTest {
+        val events = mutableListOf<String>()
+        val store = FakeAuthSessionStore().apply {
+            onBeginProviderCleanup = { events += "auth-clear" }
+        }
+        val viewModel = createViewModel(
+            store = store,
+            preSignOut = {
+                events += "prepare"
+                PendingFolderCleanupResult.Complete
+            },
+        )
+        advanceUntilIdle()
+        authorizeApproved(viewModel)
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertEquals(listOf("prepare", "auth-clear"), events)
+        assertEquals(AuthUiState.SignedOut(), viewModel.uiState.value)
+    }
+
+    @Test
+    fun retryRequiredPendingPickerCleanupStillSignsOutAndShowsWarning() = runTest {
+        val store = FakeAuthSessionStore()
+        val viewModel = createViewModel(
+            store = store,
+            preSignOut = { PendingFolderCleanupResult.RetryRequired },
+        )
+        advanceUntilIdle()
+        authorizeApproved(viewModel)
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertEquals(
+            AuthUiState.SignedOut(AuthWarning.SignOutCleanupIncomplete),
+            viewModel.uiState.value,
+        )
+        assertEquals(null, store.account)
+        assertEquals(1, store.clearCount)
+    }
+
+    @Test
+    fun signOutCollapsesProviderAndFolderCleanupFailuresIntoOneWarning() = runTest {
+        val store = FakeAuthSessionStore()
+        val credentialStateClearer = FakeCredentialStateClearer().apply {
+            clearFailure = IllegalStateException("provider cleanup detail")
+        }
+        val viewModel = createViewModel(
+            store = store,
+            credentialStateClearer = credentialStateClearer,
+            preSignOut = { PendingFolderCleanupResult.RetryRequired },
+        )
+        advanceUntilIdle()
+        authorizeApproved(viewModel)
+        advanceUntilIdle()
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertEquals(
+            AuthUiState.SignedOut(AuthWarning.SignOutCleanupIncomplete),
+            viewModel.uiState.value,
+        )
+        assertEquals(1, credentialStateClearer.clearCount)
+    }
+
+    @Test
     fun duplicateSignOutWhileCleanupIsRunningDoesNotStartAnotherCleanup() = runTest {
         val clearStarted = CompletableDeferred<Unit>()
         val allowClearToFinish = CompletableDeferred<Unit>()
@@ -627,7 +699,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun providerCleanupFailureStillSignsOutLocallyAndShowsAWarning() = runTest {
+    fun providerOnlyCleanupFailureKeepsItsSpecificWarning() = runTest {
         val store = FakeAuthSessionStore()
         val credentialStateClearer = FakeCredentialStateClearer().apply {
             clearFailure = IllegalStateException("test provider cleanup failure")
@@ -688,6 +760,9 @@ private fun createViewModel(
     store: FakeAuthSessionStore = FakeAuthSessionStore(),
     credentialStateClearer: FakeCredentialStateClearer = FakeCredentialStateClearer(),
     isGoogleSignInConfigured: Boolean = true,
+    preSignOut: suspend () -> PendingFolderCleanupResult = {
+        PendingFolderCleanupResult.Complete
+    },
 ) = AuthViewModel(
     sessionManager = AuthSessionManager(
         accessPolicy = AccountAccessPolicy(setOf(APPROVED_EMAIL)),
@@ -695,6 +770,7 @@ private fun createViewModel(
         credentialStateClearer = credentialStateClearer,
     ),
     isGoogleSignInConfigured = isGoogleSignInConfigured,
+    prepareForSignOut = preSignOut,
 )
 
 private class FakeAuthSessionStore : AuthSessionStore {
@@ -709,6 +785,7 @@ private class FakeAuthSessionStore : AuthSessionStore {
     var saveGate: CompletableDeferred<Unit>? = null
     var clearStarted: CompletableDeferred<Unit>? = null
     var clearGate: CompletableDeferred<Unit>? = null
+    var onBeginProviderCleanup: (() -> Unit)? = null
 
     override suspend fun read(): GoogleAccount? {
         readCount += 1
@@ -735,6 +812,7 @@ private class FakeAuthSessionStore : AuthSessionStore {
 
     override suspend fun beginProviderCleanup() {
         clearCount += 1
+        onBeginProviderCleanup?.invoke()
         clearStarted?.complete(Unit)
         clearGate?.await()
         clearFailure?.let { throw it }
