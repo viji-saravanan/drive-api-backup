@@ -43,6 +43,7 @@ import kotlinx.coroutines.withContext
 
 class RoomFolderMappingRepository(
     private val dao: FolderAccessDao,
+    private val signOutCleanupIntentStore: SignOutCleanupIntentStore,
     private val grantManager: LocalFolderGrantManager,
     private val metadataReader: LocalFolderMetadataReader,
     private val accessValidator: LocalFolderAccessValidator,
@@ -233,6 +234,14 @@ class RoomFolderMappingRepository(
 
     private suspend fun preparePendingCleanupForSignOut(): PendingFolderCleanupResult {
         val pending = dao.pendingOperation() ?: return PendingFolderCleanupResult.Complete
+        val intentPersisted = try {
+            signOutCleanupIntentStore.writeRequestToken(pending.requestToken)
+            true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            false
+        }
         if (pending.state != PendingFolderOperationState.Abandoning &&
             dao.markPendingAbandoning(pending.requestToken) != 1
         ) {
@@ -249,11 +258,15 @@ class RoomFolderMappingRepository(
             }
         }
 
-        return if (dao.deleteAbandoningOperation(pending.requestToken) == 1) {
-            PendingFolderCleanupResult.Complete
-        } else {
-            PendingFolderCleanupResult.RetryRequired
+        if (dao.deleteAbandoningOperation(pending.requestToken) != 1) {
+            return PendingFolderCleanupResult.RetryRequired
         }
+        if (intentPersisted &&
+            !signOutCleanupIntentStore.clearRequestToken(pending.requestToken)
+        ) {
+            return PendingFolderCleanupResult.RetryRequired
+        }
+        return PendingFolderCleanupResult.Complete
     }
 
     private suspend fun completeSelection(
@@ -448,11 +461,26 @@ class RoomFolderMappingRepository(
     }
 
     private suspend fun reconcileLocked() {
-        val pending = dao.pendingOperation()
+        val signOutRequestToken = signOutCleanupIntentStore.readRequestToken()
+        var pending = dao.pendingOperation()
         dao.allMappings()
         val persistedGrants = normalizePersistedGrants(grantManager.persistedGrants())
         val grantsByUri = persistedGrants.associateBy(PersistedFolderGrant::treeUri)
         val releasedUris = mutableSetOf<String>()
+
+        if (signOutRequestToken != null) {
+            if (pending?.requestToken == signOutRequestToken) {
+                cleanupPending(
+                    pending = pending,
+                    grantsByUri = grantsByUri,
+                    releasedUris = releasedUris,
+                )
+                pending = null
+            }
+            check(signOutCleanupIntentStore.clearRequestToken(signOutRequestToken)) {
+                "Sign-out cleanup intent changed during reconciliation"
+            }
+        }
 
         if (pending != null) {
             when {

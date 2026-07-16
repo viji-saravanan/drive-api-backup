@@ -53,6 +53,7 @@ class RoomFolderMappingRepositoryInstrumentedTest {
     private lateinit var metadata: RecordingFolderMetadataReader
     private lateinit var accessValidator: RecordingFolderAccessValidator
     private lateinit var scanner: RecordingLocalFolderScanner
+    private lateinit var signOutIntentStore: RecordingSignOutCleanupIntentStore
     private lateinit var repository: RoomFolderMappingRepository
     private val requestTokens = ArrayDeque(listOf("request-a", "request-b", "request-c"))
     private val mappingIds = ArrayDeque(listOf("mapping-a", "mapping-b", "mapping-c"))
@@ -69,8 +70,10 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         metadata = RecordingFolderMetadataReader()
         accessValidator = RecordingFolderAccessValidator()
         scanner = RecordingLocalFolderScanner()
+        signOutIntentStore = RecordingSignOutCleanupIntentStore()
         repository = RoomFolderMappingRepository(
             dao = database.folderAccessDao(),
+            signOutCleanupIntentStore = signOutIntentStore,
             grantManager = grants,
             metadataReader = metadata,
             accessValidator = accessValidator,
@@ -564,6 +567,48 @@ class RoomFolderMappingRepositoryInstrumentedTest {
     }
 
     @Test
+    fun markReturningZeroIsRecoveredAfterDatabaseAndRepositoryRecreation() = runTest {
+        insertPending(operation = PendingFolderOperationType.Add)
+        database.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER ignore_sign_out_mark
+            BEFORE UPDATE OF state ON pending_folder_operations
+            WHEN NEW.state = 'ABANDONING'
+            BEGIN
+                SELECT RAISE(IGNORE);
+            END
+            """.trimIndent(),
+        )
+
+        assertEquals(PendingFolderCleanupResult.RetryRequired, repository.prepareForSignOut())
+
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER ignore_sign_out_mark")
+        reopenDatabaseAndRepository()
+        assertTrue(repository.beginAdd() is BeginFolderPickerResult.Started)
+    }
+
+    @Test
+    fun markThrowingIsRecoveredAfterDatabaseAndRepositoryRecreation() = runTest {
+        insertPending(operation = PendingFolderOperationType.Add)
+        database.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_sign_out_mark
+            BEFORE UPDATE OF state ON pending_folder_operations
+            WHEN NEW.state = 'ABANDONING'
+            BEGIN
+                SELECT RAISE(ABORT, 'forced mark failure');
+            END
+            """.trimIndent(),
+        )
+
+        assertEquals(PendingFolderCleanupResult.RetryRequired, repository.prepareForSignOut())
+
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_sign_out_mark")
+        reopenDatabaseAndRepository()
+        assertTrue(repository.beginAdd() is BeginFolderPickerResult.Started)
+    }
+
+    @Test
     fun prepareForSignOutReleasesStagedSelectionAndClearsPendingState() = runTest {
         val treeUri = "content://provider.test/tree/sign-out-staged"
         insertPending(
@@ -923,6 +968,7 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         )
         repository = RoomFolderMappingRepository(
             dao = database.folderAccessDao(),
+            signOutCleanupIntentStore = signOutIntentStore,
             grantManager = grants,
             metadataReader = metadata,
             accessValidator = accessValidator,
@@ -1046,6 +1092,27 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         }
     }
 
+    private fun reopenDatabaseAndRepository() {
+        database.close()
+        database = Room.databaseBuilder(
+            context,
+            VijiBackupDatabase::class.java,
+            TEST_DATABASE_NAME,
+        ).build()
+        repository = RoomFolderMappingRepository(
+            dao = database.folderAccessDao(),
+            signOutCleanupIntentStore = signOutIntentStore,
+            grantManager = grants,
+            metadataReader = metadata,
+            accessValidator = accessValidator,
+            scanner = scanner,
+            ioDispatcher = Dispatchers.IO,
+            requestTokenFactory = { requestTokens.removeFirst() },
+            mappingIdFactory = { mappingIds.removeFirst() },
+            clock = { NOW_EPOCH_MS },
+        )
+    }
+
     private fun mapping(id: String, treeUri: String) = LocalFolderMappingEntity(
         id = id,
         treeUri = treeUri,
@@ -1071,6 +1138,22 @@ class RoomFolderMappingRepositoryInstrumentedTest {
         const val TEST_DATABASE_NAME = "folder_mapping_repository_test.db"
         const val PENDING_TIMEOUT_MS = 24L * 60L * 60L * 1_000L
         const val NOW_EPOCH_MS = PENDING_TIMEOUT_MS * 2L
+    }
+}
+
+private class RecordingSignOutCleanupIntentStore : SignOutCleanupIntentStore {
+    private var requestToken: String? = null
+
+    override suspend fun readRequestToken(): String? = requestToken
+
+    override suspend fun writeRequestToken(requestToken: String) {
+        this.requestToken = requestToken
+    }
+
+    override suspend fun clearRequestToken(requestToken: String): Boolean {
+        if (this.requestToken != null && this.requestToken != requestToken) return false
+        this.requestToken = null
+        return true
     }
 }
 

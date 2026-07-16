@@ -13,6 +13,8 @@ import com.aryasubramani.vijibackup.auth.google.CredentialManagerCredentialState
 import com.aryasubramani.vijibackup.auth.google.CredentialManagerGoogleSignInClient
 import com.aryasubramani.vijibackup.auth.google.GoogleSignInClient
 import com.aryasubramani.vijibackup.folderaccess.data.RoomFolderMappingRepository
+import com.aryasubramani.vijibackup.folderaccess.data.DataStoreSignOutCleanupIntentStore
+import com.aryasubramani.vijibackup.folderaccess.data.signOutCleanupIntentDataStore
 import com.aryasubramani.vijibackup.folderaccess.data.db.VijiBackupDatabase
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMappingRepository
 import com.aryasubramani.vijibackup.folderaccess.saf.ContentResolverLocalFolderAccessValidator
@@ -66,6 +68,9 @@ internal class DefaultAppContainer(context: Context) : AppContainer {
     override val folderMappingRepository: FolderMappingRepository by lazy {
         RoomFolderMappingRepository(
             dao = folderAccessDatabase.folderAccessDao(),
+            signOutCleanupIntentStore = DataStoreSignOutCleanupIntentStore(
+                applicationContext.signOutCleanupIntentDataStore,
+            ),
             grantManager = ContentResolverLocalFolderGrantManager(
                 contentResolver = applicationContext.contentResolver,
             ),
