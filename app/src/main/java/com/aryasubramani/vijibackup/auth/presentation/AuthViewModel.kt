@@ -43,6 +43,15 @@ class AuthViewModel(
         )
     }
 
+    fun requireReauthentication() {
+        val currentState = mutableUiState.value as? AuthUiState.Approved ?: return
+        if (activeSignIn != null) return
+        mutableUiState.value = AuthUiState.ReauthenticationRequired(
+            account = currentState.account,
+            automaticAttemptPending = true,
+        )
+    }
+
     fun signIn() {
         val currentState = mutableUiState.value
         val fallback = when (currentState) {
@@ -145,11 +154,17 @@ class AuthViewModel(
                         AuthWarning.ProviderStateNotCleared
                     },
                 )
-                is LoadAuthSessionResult.ReauthenticationRequired ->
-                    AuthUiState.ReauthenticationRequired(
-                        account = result.account,
-                        automaticAttemptPending = true,
-                    )
+                is LoadAuthSessionResult.Approved -> AuthUiState.Approved(result.account)
+                is LoadAuthSessionResult.Blocked -> AuthUiState.Blocked(
+                    account = result.account,
+                    warning = if (
+                        result.localStateCleared && result.providerStateCleared
+                    ) {
+                        null
+                    } else {
+                        AuthWarning.BlockedCleanupIncomplete
+                    },
+                )
                 LoadAuthSessionResult.PersistenceFailure -> {
                     retryAction = RetryAction.Initialize
                     AuthUiState.Error(reason = AuthError.Persistence)

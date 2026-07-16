@@ -80,17 +80,75 @@ class AuthSessionManagerTest {
     }
 
     @Test
-    fun cachedAccountRequiresReauthenticationInsteadOfImmediateApproval() = runTest {
+    fun cachedApprovedAccountRestoresLocalSessionWithoutProviderClear() = runTest {
         val cachedAccount = approvedAccount()
+        val credentialStateClearer = RecordingCredentialStateClearer()
         val manager = AuthSessionManager(
             accessPolicy = AccountAccessPolicy(TEST_ALLOWED_GOOGLE_ACCOUNTS),
             sessionStore = RecordingAuthSessionStore().apply { account = cachedAccount },
-            credentialStateClearer = RecordingCredentialStateClearer(),
+            credentialStateClearer = credentialStateClearer,
         )
 
         val result = manager.loadCachedSession()
 
-        assertEquals(LoadAuthSessionResult.ReauthenticationRequired(cachedAccount), result)
+        assertEquals(LoadAuthSessionResult.Approved(cachedAccount), result)
+        assertEquals(0, credentialStateClearer.clearCount)
+    }
+
+    @Test
+    fun cachedAccountRemovedFromAllowlistIsBlockedAndCleared() = runTest {
+        val cachedAccount = approvedAccount()
+        val store = RecordingAuthSessionStore().apply { account = cachedAccount }
+        val credentialStateClearer = RecordingCredentialStateClearer()
+        val manager = AuthSessionManager(
+            accessPolicy = AccountAccessPolicy(emptySet()),
+            sessionStore = store,
+            credentialStateClearer = credentialStateClearer,
+        )
+
+        val result = manager.loadCachedSession()
+
+        assertEquals(
+            LoadAuthSessionResult.Blocked(
+                account = cachedAccount,
+                localStateCleared = true,
+                providerStateCleared = true,
+            ),
+            result,
+        )
+        assertEquals(null, store.account)
+        assertEquals(false, store.providerCleanupPending)
+        assertEquals(1, credentialStateClearer.clearCount)
+    }
+
+    @Test
+    fun cachedBlockedAccountNeverApprovesWhenCleanupFails() = runTest {
+        val cachedAccount = approvedAccount()
+        val store = RecordingAuthSessionStore().apply {
+            account = cachedAccount
+            clearFailure = IllegalStateException("test storage failure")
+        }
+        val credentialStateClearer = RecordingCredentialStateClearer().apply {
+            clearFailure = IllegalStateException("test provider failure")
+        }
+        val manager = AuthSessionManager(
+            accessPolicy = AccountAccessPolicy(emptySet()),
+            sessionStore = store,
+            credentialStateClearer = credentialStateClearer,
+        )
+
+        val result = manager.loadCachedSession()
+
+        assertEquals(
+            LoadAuthSessionResult.Blocked(
+                account = cachedAccount,
+                localStateCleared = false,
+                providerStateCleared = false,
+            ),
+            result,
+        )
+        assertEquals(cachedAccount, store.account)
+        assertEquals(1, credentialStateClearer.clearCount)
     }
 
     @Test

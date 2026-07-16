@@ -70,7 +70,7 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun cachedSessionRequiresReauthenticationBeforeAuthorizedAccountAttempt() = runTest {
+    fun cachedApprovedSessionUnlocksWithoutCredentialRequest() = runTest {
         val account = approvedAccount()
         val viewModel = createViewModel(
             store = FakeAuthSessionStore().apply { this.account = account },
@@ -78,22 +78,25 @@ class AuthViewModelTest {
 
         advanceUntilIdle()
 
-        assertEquals(
-            AuthUiState.ReauthenticationRequired(
-                account = account,
-                automaticAttemptPending = true,
-            ),
-            viewModel.uiState.value,
+        assertEquals(AuthUiState.Approved(account), viewModel.uiState.value)
+    }
+
+    @Test
+    fun cachedAccountRemovedFromAllowlistRemainsBlocked() = runTest {
+        val account = approvedAccount()
+        val store = FakeAuthSessionStore().apply { this.account = account }
+        val credentialStateClearer = FakeCredentialStateClearer()
+        val viewModel = createViewModel(
+            store = store,
+            credentialStateClearer = credentialStateClearer,
+            allowedAccounts = emptySet(),
         )
 
-        viewModel.startAutomaticReauthentication()
+        advanceUntilIdle()
 
-        val signingIn = viewModel.uiState.value
-        assertTrue(signingIn is AuthUiState.SigningIn)
-        assertEquals(
-            GoogleSignInMode.AuthorizedAccounts,
-            (signingIn as AuthUiState.SigningIn).request?.mode,
-        )
+        assertEquals(AuthUiState.Blocked(account), viewModel.uiState.value)
+        assertEquals(null, store.account)
+        assertEquals(1, credentialStateClearer.clearCount)
     }
 
     @Test
@@ -244,6 +247,7 @@ class AuthViewModelTest {
             credentialStateClearer = credentialStateClearer,
         )
         advanceUntilIdle()
+        viewModel.requireReauthentication()
         viewModel.startAutomaticReauthentication()
         val request = requireNotNull(
             (viewModel.uiState.value as AuthUiState.SigningIn).request,
@@ -348,6 +352,7 @@ class AuthViewModelTest {
             store = FakeAuthSessionStore().apply { this.account = account },
         )
         advanceUntilIdle()
+        viewModel.requireReauthentication()
         viewModel.startAutomaticReauthentication()
         val request = requireNotNull(
             (viewModel.uiState.value as AuthUiState.SigningIn).request,
@@ -372,6 +377,7 @@ class AuthViewModelTest {
             store = FakeAuthSessionStore().apply { this.account = account },
         )
         advanceUntilIdle()
+        viewModel.requireReauthentication()
         viewModel.startAutomaticReauthentication()
         val automaticRequest = requireNotNull(
             (viewModel.uiState.value as AuthUiState.SigningIn).request,
@@ -391,6 +397,7 @@ class AuthViewModelTest {
         val store = FakeAuthSessionStore().apply { account = approvedAccount() }
         val viewModel = createViewModel(store = store)
         advanceUntilIdle()
+        viewModel.requireReauthentication()
         viewModel.startAutomaticReauthentication()
         val request = requireNotNull(
             (viewModel.uiState.value as AuthUiState.SigningIn).request,
@@ -402,6 +409,25 @@ class AuthViewModelTest {
         assertEquals(AuthUiState.SignedOut(), viewModel.uiState.value)
         assertEquals(null, store.account)
         assertEquals(1, store.clearCount)
+    }
+
+    @Test
+    fun securityRequiredFailureCanRelockAnApprovedSession() = runTest {
+        val account = approvedAccount()
+        val viewModel = createViewModel(
+            store = FakeAuthSessionStore().apply { this.account = account },
+        )
+        advanceUntilIdle()
+
+        viewModel.requireReauthentication()
+
+        assertEquals(
+            AuthUiState.ReauthenticationRequired(
+                account = account,
+                automaticAttemptPending = true,
+            ),
+            viewModel.uiState.value,
+        )
     }
 
     @Test
@@ -760,12 +786,13 @@ private fun createViewModel(
     store: FakeAuthSessionStore = FakeAuthSessionStore(),
     credentialStateClearer: FakeCredentialStateClearer = FakeCredentialStateClearer(),
     isGoogleSignInConfigured: Boolean = true,
+    allowedAccounts: Set<String> = setOf(APPROVED_EMAIL),
     preSignOut: suspend () -> PendingFolderCleanupResult = {
         PendingFolderCleanupResult.Complete
     },
 ) = AuthViewModel(
     sessionManager = AuthSessionManager(
-        accessPolicy = AccountAccessPolicy(setOf(APPROVED_EMAIL)),
+        accessPolicy = AccountAccessPolicy(allowedAccounts),
         sessionStore = store,
         credentialStateClearer = credentialStateClearer,
     ),
