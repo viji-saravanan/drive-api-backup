@@ -46,7 +46,28 @@ class AppContextInstrumentedTest {
         )
     }
 
+    @Test
+    fun signOutCleanupIntentIsExcludedFromEveryBackupTransport() {
+        val path = "datastore/folder_sign_out_cleanup.preferences_pb"
+        assertEquals(
+            listOf("full-backup-content"),
+            exclusionParents(R.xml.backup_rules, "file", path),
+        )
+        assertEquals(
+            listOf("cloud-backup", "device-transfer"),
+            exclusionParents(R.xml.data_extraction_rules, "file", path).sorted(),
+        )
+    }
+
     private fun databaseExclusionParents(resourceId: Int): List<String> {
+        return exclusionParents(resourceId, "database", ".")
+    }
+
+    private fun exclusionParents(
+        resourceId: Int,
+        domain: String,
+        path: String,
+    ): List<String> {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         return appContext.resources.getXml(resourceId).use { parser ->
             val elementStack = ArrayDeque<String>()
@@ -57,8 +78,8 @@ class AppContextInstrumentedTest {
                     XmlPullParser.START_TAG -> {
                         if (
                             parser.name == "exclude" &&
-                            parser.getAttributeValue(null, "domain") == "database" &&
-                            parser.getAttributeValue(null, "path") == "."
+                            parser.getAttributeValue(null, "domain") == domain &&
+                            parser.getAttributeValue(null, "path") == path
                         ) {
                             parents += elementStack.last()
                         }
