@@ -172,6 +172,42 @@ class AppCompositionInstrumentedTest {
     }
 
     @Test
+    fun mainActivityRestoresCachedApprovedSessionWithoutCredentialRequest() {
+        val application = ApplicationProvider.getApplicationContext<VijiBackupApplication>()
+        val account = approvedAccount()
+        val signInModes = mutableListOf<GoogleSignInMode>()
+        val folderRepository = EmptyFolderMappingRepository()
+        val fakeContainer = object : AppContainer {
+            override val authSessionManager = AuthSessionManager(
+                accessPolicy = AccountAccessPolicy(setOf(account.email)),
+                sessionStore = InMemoryAuthSessionStore(account),
+                credentialStateClearer = CredentialStateClearer {},
+            )
+            override val googleSignInClient = GoogleSignInClient { _, mode ->
+                signInModes += mode
+                error("Cached session must not request a Google credential")
+            }
+            override val folderMappingRepository = folderRepository
+            override val isGoogleSignInConfigured = true
+        }
+        application.testAppContainer = fakeContainer
+
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use {
+                composeRule.waitForIdle()
+
+                composeRule.onNodeWithTag(VijiBackupTestTags.ProtectedContent)
+                    .assertIsDisplayed()
+                composeRule.onNodeWithTag(FolderAccessTestTags.Screen).assertIsDisplayed()
+                assertTrue(signInModes.isEmpty())
+                assertEquals(1, folderRepository.observeCalls)
+            }
+        } finally {
+            application.testAppContainer = null
+        }
+    }
+
+    @Test
     fun mainActivityCompletesActiveFolderPickerResultThroughRegistryAfterRecreation() {
         val application = ApplicationProvider.getApplicationContext<VijiBackupApplication>()
         val folderRepository = EmptyFolderMappingRepository()
@@ -432,8 +468,9 @@ private class ControllableActivityResultRegistry : ActivityResultRegistry() {
     }
 }
 
-private class InMemoryAuthSessionStore : AuthSessionStore {
-    private var account: GoogleAccount? = null
+private class InMemoryAuthSessionStore(
+    private var account: GoogleAccount? = null,
+) : AuthSessionStore {
 
     override suspend fun read(): GoogleAccount? = account
 
