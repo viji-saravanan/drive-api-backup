@@ -152,6 +152,80 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun changeAccountFromApprovedSessionRequestsExplicitChooser() = runTest {
+        val account = approvedAccount()
+        val viewModel = createViewModel(
+            store = FakeAuthSessionStore().apply { this.account = account },
+        )
+        advanceUntilIdle()
+
+        viewModel.changeAccount()
+
+        val request = requireNotNull(
+            (viewModel.uiState.value as AuthUiState.SigningIn).request,
+        )
+        assertEquals(GoogleSignInMode.Explicit, request.mode)
+    }
+
+    @Test
+    fun cancellingAccountChangeRestoresCurrentApprovedSession() = runTest {
+        val account = approvedAccount()
+        val store = FakeAuthSessionStore().apply { this.account = account }
+        val viewModel = createViewModel(store = store)
+        advanceUntilIdle()
+        viewModel.changeAccount()
+        val request = requireNotNull(
+            (viewModel.uiState.value as AuthUiState.SigningIn).request,
+        )
+
+        viewModel.onSignInResult(request.id, GoogleSignInResult.Cancelled)
+
+        assertEquals(AuthUiState.Approved(account), viewModel.uiState.value)
+        assertEquals(account, store.account)
+    }
+
+    @Test
+    fun approvedAccountChangeReplacesPersistedSession() = runTest {
+        val firstAccount = approvedAccount()
+        val secondAccount = secondApprovedAccount()
+        val store = FakeAuthSessionStore().apply { account = firstAccount }
+        val viewModel = createViewModel(
+            store = store,
+            allowedAccounts = setOf(APPROVED_EMAIL, SECOND_APPROVED_EMAIL),
+        )
+        advanceUntilIdle()
+        viewModel.changeAccount()
+        val request = requireNotNull(
+            (viewModel.uiState.value as AuthUiState.SigningIn).request,
+        )
+
+        viewModel.onSignInResult(request.id, GoogleSignInResult.Success(secondAccount))
+        advanceUntilIdle()
+
+        assertEquals(AuthUiState.Approved(secondAccount), viewModel.uiState.value)
+        assertEquals(secondAccount, store.account)
+    }
+
+    @Test
+    fun blockedAccountChangeClearsPreviousApprovedSession() = runTest {
+        val firstAccount = approvedAccount()
+        val blockedAccount = blockedAccount()
+        val store = FakeAuthSessionStore().apply { account = firstAccount }
+        val viewModel = createViewModel(store = store)
+        advanceUntilIdle()
+        viewModel.changeAccount()
+        val request = requireNotNull(
+            (viewModel.uiState.value as AuthUiState.SigningIn).request,
+        )
+
+        viewModel.onSignInResult(request.id, GoogleSignInResult.Success(blockedAccount))
+        advanceUntilIdle()
+
+        assertEquals(AuthUiState.Blocked(blockedAccount), viewModel.uiState.value)
+        assertEquals(null, store.account)
+    }
+
+    @Test
     fun approvedStateIsNotEmittedWhileSessionPersistenceIsStillRunning() = runTest {
         val saveStarted = CompletableDeferred<Unit>()
         val allowSaveToFinish = CompletableDeferred<Unit>()
@@ -862,6 +936,14 @@ private fun approvedAccount() = requireNotNull(
     ),
 )
 
+private fun secondApprovedAccount() = requireNotNull(
+    GoogleAccount.create(
+        subject = "second-approved-subject",
+        email = SECOND_APPROVED_EMAIL,
+        displayName = "Second Approved User",
+    ),
+)
+
 private fun authorizeApproved(viewModel: AuthViewModel) {
     viewModel.signIn()
     val request = requireNotNull(
@@ -892,3 +974,4 @@ private class FakeCredentialStateClearer : CredentialStateClearer {
 }
 
 private const val APPROVED_EMAIL = "approved.user@example.test"
+private const val SECOND_APPROVED_EMAIL = "second.approved.user@example.test"

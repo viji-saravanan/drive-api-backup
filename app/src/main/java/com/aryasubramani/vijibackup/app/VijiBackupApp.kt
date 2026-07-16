@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ fun VijiBackupApp(
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
+    onChangeAccount: () -> Unit = {},
     onAddFolder: () -> Unit = {},
     onRepairFolder: (String) -> Unit = {},
     onRemoveFolder: (String) -> Unit = {},
@@ -82,6 +85,7 @@ fun VijiBackupApp(
                             uiState = uiState,
                             folderAccessUiState = folderAccessUiState,
                             onSignOut = onSignOut,
+                            onChangeAccount = onChangeAccount,
                             onAddFolder = onAddFolder,
                             onRepairFolder = onRepairFolder,
                             onRemoveFolder = onRemoveFolder,
@@ -107,6 +111,7 @@ private fun ApprovedContent(
     uiState: AuthUiState.Approved,
     folderAccessUiState: FolderAccessUiState,
     onSignOut: () -> Unit,
+    onChangeAccount: () -> Unit,
     onAddFolder: () -> Unit,
     onRepairFolder: (String) -> Unit,
     onRemoveFolder: (String) -> Unit,
@@ -126,11 +131,21 @@ private fun ApprovedContent(
                 R.string.auth_approved_message,
                 uiState.account.email,
             ),
-            actionLabel = stringResource(R.string.auth_sign_out_action),
-            actionTag = AuthTestTags.SignOutButton,
-            onAction = onSignOut,
+            actionLabel = stringResource(R.string.auth_change_account_action),
+            actionTag = AuthTestTags.ChangeAccountButton,
+            onAction = onChangeAccount,
             outlinedAction = true,
         )
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onSignOut,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .testTag(AuthTestTags.SignOutButton),
+        ) {
+            Text(stringResource(R.string.auth_sign_out_action))
+        }
         Spacer(Modifier.height(32.dp))
         FolderAccessContent(
             uiState = folderAccessUiState,

@@ -115,6 +115,7 @@ class MainActivity : ComponentActivity() {
                 onSignIn = authViewModel::signIn,
                 onRetry = authViewModel::retry,
                 onSignOut = ::signOut,
+                onChangeAccount = authViewModel::changeAccount,
                 onAddFolder = folderAccessViewModel::addFolder,
                 onRepairFolder = folderAccessViewModel::repairFolder,
                 onRemoveFolder = folderAccessViewModel::removeFolder,

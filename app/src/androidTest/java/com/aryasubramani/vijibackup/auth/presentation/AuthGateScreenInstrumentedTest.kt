@@ -66,6 +66,7 @@ class AuthGateScreenInstrumentedTest {
     @Test
     fun approvedAccountIsTheOnlyStateThatRendersProtectedContent() {
         var signOutRequested = false
+        var changeAccountRequested = false
         var addFolderRequested = false
         composeRule.setContent {
             VijiBackupApp(
@@ -74,6 +75,7 @@ class AuthGateScreenInstrumentedTest {
                 onSignIn = {},
                 onRetry = {},
                 onSignOut = { signOutRequested = true },
+                onChangeAccount = { changeAccountRequested = true },
                 onAddFolder = { addFolderRequested = true },
                 onRepairFolder = {},
             )
@@ -92,8 +94,14 @@ class AuthGateScreenInstrumentedTest {
             .assertHasClickAction()
             .assertTextEquals(appString(R.string.auth_sign_out_action))
             .performClick()
+        composeRule.onNodeWithTag(AuthTestTags.ChangeAccountButton)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .assertTextEquals(appString(R.string.auth_change_account_action))
+            .performClick()
 
         assertTrue(signOutRequested)
+        assertTrue(changeAccountRequested)
         assertTrue(addFolderRequested)
     }
 

@@ -195,6 +195,7 @@ internal object AuthTestTags {
     const val Warning = "auth_warning"
     const val StatusTitle = "auth_status_title"
     const val SignInButton = "auth_sign_in"
+    const val ChangeAccountButton = "auth_change_account"
     const val RetryButton = "auth_retry"
     const val SignOutButton = "auth_sign_out"
 }

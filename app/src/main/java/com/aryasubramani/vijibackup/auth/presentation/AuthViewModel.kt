@@ -65,6 +65,14 @@ class AuthViewModel(
         beginSignIn(mode = GoogleSignInMode.Explicit, fallback = fallback)
     }
 
+    fun changeAccount() {
+        val currentState = mutableUiState.value as? AuthUiState.Approved ?: return
+        beginSignIn(
+            mode = GoogleSignInMode.Explicit,
+            fallback = currentState,
+        )
+    }
+
     fun consumeSignInRequest(requestId: Long): GoogleSignInMode? {
         val operation = activeSignIn ?: return null
         val state = mutableUiState.value as? AuthUiState.SigningIn ?: return null

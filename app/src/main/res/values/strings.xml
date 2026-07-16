@@ -27,6 +27,7 @@
     <string name="auth_warning_blocked_cleanup">Access remains blocked. Some account state could not be cleared.</string>
     <string name="auth_sign_in_action">Sign in with Google</string>
     <string name="auth_choose_account_action">Choose another account</string>
+    <string name="auth_change_account_action">Change account</string>
     <string name="auth_retry_action">Retry</string>
     <string name="auth_sign_out_action">Sign out</string>
     <string name="folder_access_title">Folders</string>
