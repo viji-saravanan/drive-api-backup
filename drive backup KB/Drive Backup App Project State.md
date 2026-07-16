@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -33,10 +33,10 @@ implemented Phase 3 local-folder slices are integrated on `main` through PRs
 #1-#4. Their implementation packets, architecture, failure matrix, security
 rules, source register, and physical-device acceptance matrix are committed
 alongside the code. The active completion branch now contains the remaining
-typed health, durable enablement, scanner, per-mapping orchestration, and
-protected control surface. Core live Samsung acceptance is recorded below. The
-branch is ready for a draft PR; whole-branch review and destructive recovery
-cases remain intentionally deferred before merge.
+typed health, durable enablement, scanner, per-mapping orchestration, protected
+control surface, and durable pending-picker sign-out recovery. The safe live
+Samsung closure matrix is complete and recorded below. The branch remains a
+draft PR until the intentionally deferred whole-branch review is performed.
 
 Implemented Phase 2 slices:
 
@@ -79,6 +79,9 @@ Implemented Phase 3 slices:
 - sign-out compensation that serializes and retries pending picker cleanup
   before local auth state is cleared, without blocking sign-out on one cleanup
   failure;
+- an exact-token DataStore cleanup intent that survives process recreation when
+  Room cannot mark pending picker work, is excluded from backup and transfer,
+  and cannot retire a newer picker request;
 - per-launch picker callback identity that discards a retired pre-sign-out
   result without consuming a post-sign-in replacement, including activity
   recreation;
@@ -157,6 +160,13 @@ Email notification defaults:
   `viji-saravanan`; both commit with their GitHub-provided `noreply` identity.
 - Current workflow intentionally splits commits between Arya personal and Viji.
   Never commit from Arya work.
+- Tracked source and reachable patch content contain no configured account,
+  OAuth, secret, or Drive identifier. Two pre-cleanup GitHub-generated merge
+  commits on `main` still contain one collaborator's personal commit email in
+  commit metadata. It is not an app secret or tracked-source value. Removing it
+  requires a coordinated rewrite of `main` and every descendant collaborator
+  branch, so it is tracked separately from Phase 3 rather than silently
+  force-rewritten during a feature push.
 - Client-side email allowlisting is a convenience gate in an untampered build,
   not an authoritative authorization boundary. A public APK exposes compiled
   identifiers and can be modified. Phase 4 and every future sync operation must
@@ -289,8 +299,43 @@ Additional Phase 3 orchestration and core live evidence on 2026-07-15:
   cancelling the larger scan changed only that mapping, and retry completed;
 - the dedicated 1,502-file before/after content sentinel was byte-for-byte
   unchanged;
-- grant-loss repair, controlled removal, co-administrator switching, and the
-  final whole-branch review remain merge gates and are not inferred as passes.
+- this evidence is superseded by the completed 2026-07-16 recovery matrix below.
+
+Phase 3 closure evidence on 2026-07-16:
+
+- the review-discovered pending-picker restart defect is fixed with an
+  exact-token durable cleanup intent while Room remains schema 1; both flavor
+  host suites, focused file-backed Room recreation tests, and focused Samsung
+  instrumentation pass;
+- ViewModel tests now cover complete, partial, failed, terminal-less, throwing,
+  non-cooperative late-event, cancel-versus-complete, and concurrent
+  failed/healthy scan behavior; no production defect was exposed;
+- a controllable `ActivityResultRegistry` test launches a real dynamic registry
+  key, recreates `MainActivity`, dispatches through the restored request code,
+  and proves exactly one completion with the original request token;
+- the canonical 179-task two-flavor unit, app APK, Android-test APK, and lint
+  matrix passes with 115 JVM tests per flavor; the complete Android
+  instrumentation package passes 160 tests per flavor on Samsung user 0;
+- the final redacted live probe reports 3 named mappings, 3 persisted tree read
+  grants, 0 write grants, and no pending picker operation after in-place APK
+  replacement without clearing app data;
+- a real 1,502-file scan completed across 5 folders with 0 unreadable entries;
+  complete content manifests remained identical after scan, grant revocation,
+  same-tree repair, confirmed removal, re-add, move/repair, and restoration;
+- explicit grant revocation degraded only the selected mapping, a healthy
+  mapping remained scannable, and selecting the same tree restored the mapping
+  without releasing the replacement grant;
+- live picker cancellation created no mapping, exact duplicate selection was
+  rejected, confirmed removal released app access without deleting files, and
+  re-adding restored the expected 3-mapping baseline;
+- a second configured approved identity viewed the installation-scoped mappings
+  and completed a real 2-file scan with 0 unreadable entries;
+- moving the dedicated tree produced a typed temporary-unavailable state after
+  revalidation; repair followed the moved tree, and the original name and
+  mapping were restored without content change;
+- the recent-apps preview rendered protected content blank, and the reviewed
+  app-process log contained zero email, content-URI, OAuth-client, JWT-shaped,
+  UUID-shaped, or live-label matches.
 
 ## Current Passing Checks
 
@@ -315,18 +360,18 @@ proving a clean checkout reaches the intended fail-closed setup state.
 
 ## Immediate Goal
 
-Publish the completed Phase 3 implementation branch as a draft PR while keeping
-unrun destructive recovery cases and the explicitly deferred whole-branch review
-visible as merge gates.
+Push the completed Phase 3 implementation and live-acceptance closure to its
+existing draft PR. Keep the explicitly deferred whole-branch review as the only
+Phase 3 merge gate, then begin Phase 4 on a new branch from this exact Phase 3
+head when the project owner signals.
 
 Next sequence:
 
-- push the completion branch and open a comprehensive draft PR;
-- run the deferred whole-branch review and remaining destructive live recovery
-  cases before merge;
+- push the completion branch and refresh the comprehensive draft PR;
+- run the deferred whole-branch review before merge;
 - keep configured APKs and raw live evidence out of public CI and Git;
-- begin Phase 4 only on explicit user signal, starting with exact top-level
-  Downloads access before Drive destination authorization.
+- begin Phase 4 on explicit user signal, first closing UX-01 cold-launch sign-in
+  persistence and exact top-level Downloads access before Drive authorization.
 
 ## Next Notes
 

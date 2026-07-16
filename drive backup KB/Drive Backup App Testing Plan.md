@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-testing-plan
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 context_role: testing
 read_when:
   - The agent writes, reviews, or plans tests.
@@ -244,33 +244,48 @@ system picker and real persisted grant:
 - process logs and public evidence contain no raw URI, live filename, subject,
   token, OAuth identifier, or exception payload.
 
-Focused evidence current on 2026-07-15:
+Focused evidence current on 2026-07-16:
 
-- 51 repository instrumentation cases pass on Android user 0, covering add,
-  duplicate rejection, pending recovery, grant reduction/reconciliation,
-  metadata backfill, repair, removal, cancellation, and forced SQLite
-  delete-failure retry;
+- the canonical 179-task two-flavor unit, app APK, Android-test APK, and lint
+  matrix passes after all closure changes with 115 JVM tests per flavor;
+- the complete Android instrumentation package passes 160 tests per flavor on
+  Samsung user 0; focused counts below identify the highest-risk closure slices
+  within that complete pass;
+- 58 focused repository, durable-cleanup-store, and app-context instrumentation
+  cases pass on Android user 0, including file-backed restart recovery after
+  forced Room mark-zero and mark-throwing failures;
 - 11 Compose folder-screen cases pass on the Samsung, covering real/fallback
   labels, exact-ID forwarding, named confirmation, cancel-without-side-effect,
   in-flight progress, disabled competing actions, and non-sensitive notices;
-- the app-composition lifecycle case proves one explicit sign-in and one
-  long-lived folder observer across Home/resume and activity recreation;
-- the ViewModel coroutine-race case proves that a cancelled removal completing
-  late cannot clear progress, admit a third mutation, or publish state over a
-  newer removal;
-- the redacted live probe confirms 2 dedicated mappings, 2 persisted tree
+- 5 app-composition cases pass on the Samsung, including real dynamic
+  `ActivityResultRegistry` delivery after recreation and one-shot exact-token
+  completion;
+- ViewModel coverage proves complete, partial, failed, terminal-less, throwing,
+  non-cooperative late-event, cancel-versus-complete, and concurrent
+  failed/healthy behavior without cross-mapping state loss;
+- the final redacted live probe confirms 3 named mappings, 3 persisted tree
   grants, 0 write grants, and no pending picker operation;
-- the redacted pre-fixture probe found 0 mappings and 0 grants; after real picker
-  selection the probe found 2 named mappings without printing names or URIs;
-- real scans completed for 2 files and 1,502 files respectively; the large scan
-  was cancelled and retried while the small mapping remained usable;
-- the dedicated 1,502-file mutation sentinel was unchanged after scanning and
-  cancellation;
+- a real 1,502-file scan traversed 5 folders with 0 unreadable entries; a second
+  configured approved identity completed a separate 2-file scan with 0
+  unreadable entries;
+- exact duplicate selection was rejected, picker cancellation created no
+  mapping, and controlled removal released app access before a clean re-add;
+- an opt-in instrumentation-only control released exactly one grant selected by
+  a display-name digest; only that mapping degraded, a healthy mapping remained
+  usable, and same-tree repair restored the expected grant baseline;
+- moving the dedicated tree produced a typed unavailable state after
+  revalidation, repair followed the moved tree, and restoration returned to the
+  original 3-mapping baseline;
+- the dedicated 1,502-file content manifest remained identical after scan,
+  revocation, repair, remove, re-add, move/repair, and restoration;
+- the protected recent-apps card was blank, and the app-process log audit found
+  zero email, content-URI, OAuth-client, JWT-shaped, UUID-shaped, or live-label
+  matches;
 - the exact Downloads root is visibly blocked by Android DocumentsUI as the
   official Android 11+ contract requires. This is not an app defect and must not
   be bypassed silently;
-- grant-loss repair, controlled live removal, co-administrator switching, and
-  the final review remain explicit merge gates.
+- the whole-branch review remains intentionally deferred as the final merge
+  gate; it is not needed to repeat the completed live matrix.
 
 Impossible-to-induce branches use a controllable instrumentation-only
 DocumentsProvider through the production scanner. This is not live acceptance.

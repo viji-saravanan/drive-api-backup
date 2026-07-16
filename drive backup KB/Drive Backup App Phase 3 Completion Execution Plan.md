@@ -1,12 +1,12 @@
 ---
 doc_id: drive-backup-app-phase-3-completion-execution-plan
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 context_role: execution-plan
 artifact_contract: superpowers-implementation-plan/v1
 artifact_readiness: implementation-ready
 execution: code
-execution_status: implementing
+execution_status: complete
 read_when:
   - The agent completes, reviews, or tests Phase 3 folder health, metadata scanning, enablement, or sign-out compensation.
   - The agent needs the current branch, task order, test commands, or live Samsung acceptance sequence for Phase 3 closure.
@@ -478,7 +478,7 @@ repair/remove usable. No raw identifier is rendered.
   Gradle connected runner if it probes Android user 150.
 - [x] Capture before/after mutation-sentinel manifests locally for only the
   dedicated Viji Backup test tree.
-- [ ] Run every safe `FOLDER-LIVE-*` case: picker cancel, add, read-only grant,
+- [x] Run every safe `FOLDER-LIVE-*` case: picker cancel, add, read-only grant,
   exact duplicate, edge-case scan, real read-only folder scans, cancel/isolation,
   force-stop/relaunch, grant release/repair, same-URI repair, dedicated-tree
   move/repair, broken/healthy isolation, co-admin identity, controlled remove,
@@ -486,8 +486,18 @@ repair/remove usable. No raw identifier is rendered.
 - [x] Never infer which existing mapping is dispensable. The operator explicitly
   identifies the dedicated mapping before any live remove or move action.
 - [x] Record only counts, status codes, and pass/fail evidence in Git.
-- [ ] Run secret/personal-identifier/history scans, whole-branch review, and the
-  final requirements checklist before push and PR creation.
+- [x] Run tracked-source and reachable-patch secret/personal-identifier scans
+  and the final requirements checklist before the closure push; no configured
+  values are present in content. Keep the two documented pre-cleanup merge
+  metadata emails in Project State as separate history-rewrite work.
+- [ ] Run the intentionally deferred whole-branch review before merge; do not
+  repeat the completed live matrix unless the review changes relevant behavior.
+
+The 2026-07-16 live closure restored the dedicated test fixture after every
+controlled mutation and ended at 3 named mappings, 3 read grants, 0 write
+grants, and no pending picker operation. All tracked evidence is aggregate and
+redacted; raw manifests, screenshots, logs, account data, URIs, and identifiers
+remain outside Git.
 
 ## Canonical Verification Commands
 

@@ -1,12 +1,12 @@
 ---
 doc_id: drive-backup-app-phase-3-local-folder-access-implementation-plan
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 context_role: implementation-plan
 artifact_contract: ce-unified-plan/v1
 artifact_readiness: implementation-ready
 execution: code
-execution_status: implementation-complete-live-closure-partial
+execution_status: implementation-and-live-closure-complete
 read_when:
   - The agent implements, reviews, or tests Phase 3 local folder access.
   - The agent changes folder mappings, SAF URI grants, local tree scanning, or permission repair.
@@ -784,6 +784,14 @@ Phase 3 is complete only when all are true:
 - KB, fresh-laptop instructions, source register, project state, and PR evidence
   match the implementation;
 - every deferred hardware case remains explicitly tracked.
+
+The implementation and safe live exit gate passed on the Samsung/API 34
+baseline on 2026-07-16. Final state was 3 named mappings, 3 persisted read
+grants, 0 write grants, and no pending picker operation. Full content manifests
+for the dedicated 1,502-file tree matched after scan, cancellation, grant
+revocation, same-tree repair, remove/re-add, move/repair, and restoration. The
+whole-branch review remains a separate, intentionally deferred pre-merge gate;
+it does not invalidate the completed implementation or live evidence.
 
 ## Official Sources
 
