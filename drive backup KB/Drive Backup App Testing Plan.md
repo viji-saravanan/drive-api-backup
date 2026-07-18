@@ -326,8 +326,37 @@ Implementation Plan]]. Evidence current on 2026-07-18:
 The Phase 4 Downloads milestone is closed. Physical API 24-29 fallback coverage,
 another manufacturer's phone, removable storage, and OS-protected
 `Android/data`/`Android/obb` locations remain compatibility/release matrix items;
-they are not claimed as universally accessible. Google Drive authorization and
-upload have not started and receive no acceptance credit from these tests.
+they are not claimed as universally accessible. Google Drive upload has not
+started and receives no acceptance credit from these tests.
+
+## Phase 4 Drive Connection Evidence
+
+The exact contract is owned by [[Drive Backup App Phase 4 Drive Authorization
+And Destination Plan]]. Evidence current on 2026-07-18:
+
+- both-flavor unit, app APK, Android-test APK, and lint tasks pass after Drive
+  authorization, destination health, UI, and composition wiring;
+- 19 focused Samsung user-0 instrumentation tests pass with zero failures: 5
+  plain-language Drive UI cases, 4 Activity Result cases, 7 real-activity
+  composition/lifecycle cases, 2 Google provider/request-shape cases, and 1
+  installed network-permission case;
+- deterministic tests cover direct authorization, resolution-required, missing
+  token/scope, optional returned identity, account mismatch, duplicate/stale
+  callbacks, silent-resolution suppression, malformed/oversized provider data,
+  200 metadata variants, 401, typed 403 reason families, 404, 429, 5xx,
+  transport failure, and cancellation propagation;
+- explicit Connect on the installed public build traverses real Google Play
+  services authorization and reaches `Ready` only after the exact configured
+  folder reports list and add-child capability;
+- force-stop and cold launch reuse the approved app session and Drive grant
+  without opening Credential Manager, account selection, or consent;
+- scans of persistent app storage and app-process logcat find no common access-
+  token, refresh-token, `Bearer`, or Google token-prefix markers.
+
+Still required for full Drive exit acceptance: live user cancel/back, Editor
+permission removal and restoration, Drive-grant revocation and repair, offline
+or airplane mode, interrupted consent, and the complete latest two-flavor
+connected-device matrix. These remain explicit gaps, not assumed passes.
 
 ## Data Set Matrix
 

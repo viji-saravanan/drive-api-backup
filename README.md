@@ -2,7 +2,13 @@
 
 Viji Backup is a personal Android app for selected-folder backup to a shared Google Drive folder.
 
-The project is intentionally built in phases. Phase 1 established the Android foundation. Phase 2 implements a fail-closed Google Credential Manager gate, exact local account policy, session metadata persistence, sign-out cleanup, and internal/public debug variants. Drive authorization, selected-folder sync, email, and release signing are not implemented yet.
+The project is intentionally built in phases. Phase 1 established the Android
+foundation. Phase 2 implements a fail-closed Google Credential Manager gate and
+private build variants. Phase 3 implements read-only selected-folder mapping and
+scanning. The active Phase 4 branch adds durable session reuse, exact Downloads
+access, account-bound Google Drive authorization, and live writable-destination
+health. File upload, scheduling, email delivery, restore, and release signing
+are not implemented yet.
 
 ## Project Root
 

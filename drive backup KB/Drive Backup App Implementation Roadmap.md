@@ -152,9 +152,11 @@ Exit gate:
 
 ## Phase 4: Downloads Source And Drive Destination Setup
 
-Status: active. Session persistence and the exact Downloads milestone are
-complete with physical Samsung evidence. Drive authorization and destination
-setup are next.
+Status: active. Session persistence, exact Downloads, account-bound Drive
+authorization, and configured-destination health are implemented with physical
+Samsung evidence. The next implementation milestone is the per-user/per-device
+destination contract and controlled create probe; the remaining destructive
+Drive revocation and offline cases stay explicit pre-merge gates.
 
 Entry prerequisites:
 

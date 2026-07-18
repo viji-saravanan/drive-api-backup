@@ -29,7 +29,7 @@ small Drive REST adapter. Every later worker repeats silent authorization; if
 Google requires user interaction, work stops with `NeedsAuthorization` instead
 of launching consent from the background.
 
-**Tech stack:** Kotlin, Coroutines, Google Play services Auth 21.5.0,
+**Tech stack:** Kotlin, Coroutines, Google Play services Auth 21.6.0,
 `AuthorizationClient`, Activity Result APIs, `HttpURLConnection`, structured
 JSON parsing, Compose, JUnit, Android instrumentation, real Google Drive
 acceptance on a physical phone.
@@ -67,8 +67,9 @@ Runtime least privilege remains strict even with the broad Google grant:
 
 - Build the authorization request with the exact approved normalized account.
 - Never use account-selection prompt mode during Drive authorization.
-- Verify the returned account email; if a stable Google ID is present, verify it
-  against the approved subject as well.
+- Bind the request with `setAccount` to the approved normalized address. If the
+  authorization result exposes an account email, verify it; Google may omit
+  account metadata, so absence alone is not treated as a mismatch.
 - Any mismatch is terminal and fail closed. Discard the token, expose no
   destination state, and require account repair.
 - A local cached app session is not Drive authorization. Every Drive operation
@@ -88,6 +89,7 @@ Runtime least privilege remains strict even with the broad Google grant:
 | `DestinationNotFolder` | Configured ID resolves to a non-folder file. | Repair configuration |
 | `DestinationTrashed` | Folder exists but is trashed. | Restore or replace folder |
 | `DestinationReadOnly` | User can see but cannot add children. | Grant Editor access |
+| `DestinationQuotaExceeded` | The destination owner or shared container has no usable capacity. | Free storage, then refresh |
 | `TemporaryFailure` | Network, timeout, 429, or 5xx prevents a current answer. | Retry; do not erase setup |
 | `Ready` | Current account can read the folder metadata and add children. | Continue setup or refresh |
 
@@ -121,49 +123,52 @@ Drive error message in UI, logs, exceptions, test names, commits, or PR output.
 
 ## Task 1: Configuration And Pure State
 
-- [ ] Validate non-empty destination configuration without exposing its value.
-- [ ] Add typed request, result, health, and UI states.
-- [ ] Write RED tests for every transition, duplicate request, cancellation,
+- [x] Validate non-empty destination configuration without exposing its value.
+- [x] Add typed request, result, health, and UI states.
+- [x] Write RED tests for every transition, duplicate request, cancellation,
   stale callback, account change, sign-out, retry, and configuration failure.
-- [ ] Commit configuration/domain state independently.
+- [x] Commit configuration/domain state independently.
 
 ## Task 2: Google Authorization Adapter
 
-- [ ] Add the pinned official Play services Auth dependency.
-- [ ] Build an account-bound request for exactly the restricted Drive scope.
-- [ ] Map already-authorized, resolution-required, cancelled, unavailable,
+- [x] Add the pinned official Play services Auth dependency.
+- [x] Build an account-bound request for exactly the restricted Drive scope.
+- [x] Map already-authorized, resolution-required, cancelled, unavailable,
   malformed, missing-scope, missing-token, and account-mismatch outcomes.
-- [ ] Launch the returned `PendingIntent` through Activity Result and correlate
+- [x] Launch the returned `PendingIntent` through Activity Result and correlate
   the callback across activity recreation.
-- [ ] Prove tokens and result intents are never persisted or logged.
-- [ ] Commit authorization independently.
+- [x] Distinguish an AndroidX-synthesized `SendIntentException` result from an
+  ordinary user cancellation.
+- [x] Prove tokens and result intents are never persisted or logged.
+- [x] Commit authorization independently.
 
 ## Task 3: Destination Health Adapter
 
-- [ ] Add a bounded HTTPS transport with connect/read timeouts, response-size
+- [x] Add a bounded HTTPS transport with connect/read timeouts, response-size
   limit, no redirects, and cancellation-safe cleanup.
-- [ ] Parse structured JSON and classify every status/metadata row above.
-- [ ] Write RED tests for 200 variants, 401, 403 reasons, 404, 429, 5xx,
+- [x] Parse structured JSON and classify every status/metadata row above.
+- [x] Write RED tests for 200 variants, 401, 403 reasons, 404, 429, 5xx,
   malformed/oversized response, timeout, cancellation, and thrown transport.
-- [ ] Ensure one failed check cannot change local folder or Downloads state.
-- [ ] Commit destination health independently.
+- [x] Ensure one failed check cannot change local folder or Downloads state.
+- [x] Commit destination health independently.
 
 ## Task 4: Protected UI And Composition
 
-- [ ] Add a compact Drive section visible only for an approved local account.
-- [ ] Expose Connect, Retry/Refresh, and precise non-sensitive state copy.
-- [ ] Disable duplicate actions while a request or Google resolution is active.
-- [ ] Deactivate on sign-out/account change and ignore retired callbacks.
-- [ ] Add Compose and real `MainActivity` tests for all controls and lifecycle
+- [x] Add a compact Drive section visible only for an approved local account.
+- [x] Expose Connect, Retry/Refresh, and precise non-sensitive state copy.
+- [x] Disable duplicate actions while a request or Google resolution is active.
+- [x] Deactivate on sign-out/account change and ignore retired callbacks.
+- [x] Add Compose and real `MainActivity` tests for all controls and lifecycle
   boundaries without rendering IDs, scopes, tokens, or server payloads.
-- [ ] Commit presentation/composition independently.
+- [x] Commit presentation/composition independently.
 
 ## Task 5: Physical Live Acceptance
 
-- [ ] First connect launches Google consent for the currently approved account.
+- [x] Explicit Connect traverses Google Play services resolution for the
+  currently approved account.
 - [ ] Cancel/back leaves `NeedsAuthorization` and exposes no destination claim.
-- [ ] Grant reaches `Ready` against the real configured shared folder.
-- [ ] Force-stop/relaunch silently restores current health without a chooser or
+- [x] Grant reaches `Ready` against the real configured shared folder.
+- [x] Force-stop/relaunch silently restores current health without a chooser or
   consent screen when the grant remains valid.
 - [ ] Remove Editor access: destination becomes inaccessible/read-only while all
   local mappings and Downloads configuration remain intact.
@@ -174,7 +179,22 @@ Drive error message in UI, logs, exceptions, test names, commits, or PR output.
   authorization states, never success.
 - [ ] Run both flavor unit/APK/Android-test APK/lint checks and physical
   instrumented tests on Android user 0.
-- [ ] Record only redacted state/count evidence and push sequential commits.
+- [x] Record only redacted state/count evidence and push sequential commits.
+
+## Current Evidence
+
+On 2026-07-18, both-flavor unit, app APK, Android-test APK, and lint tasks
+passed. A focused 19-test instrumentation set passed on the Samsung Android
+user-0 target.
+The public debug APK was then installed in place, preserving the real approved
+session. Explicit Drive connection reached the configured folder's real
+writable/listable `Ready` state. A force-stop and cold start returned directly
+to that state without account or consent UI. Persistent app-data and app-process
+log scans found no common token markers.
+
+The unchecked live rows above are deliberately not inferred from deterministic
+tests. Editor ACL changes, Drive grant revocation, offline mode, and user
+cancellation remain required before this plan's full exit gate can be claimed.
 
 ## Exit Gate
 

@@ -31,9 +31,10 @@ Knowledge base:
 Phase 1 foundation, Phase 2 authentication, the public-source workflow, and the
 complete Phase 3 local-folder implementation are integrated on `main` through
 PRs #1-#5. `feature/phase-4-downloads-drive-setup` and draft PR #6 now target
-`main` directly and contain the first two
-Phase 4 boundaries: durable approved-session reuse with explicit account
-switching, and exact top-level Downloads access with a read-only scanner. Their
+`main` directly and contain three Phase 4 boundaries: durable approved-session
+reuse with explicit account switching, exact top-level Downloads access with a
+read-only scanner, and account-bound Drive authorization with configured-
+destination health. Their
 implementation plans, source claims, and physical-device evidence are committed
 with the code. Whole-branch review remains intentionally deferred before merge.
 
@@ -128,11 +129,27 @@ Implemented Phase 4 slices:
 - physical Samsung acceptance for force-stop persistence, visible scan,
   denial/back, external revocation, repair, disable/enable, remove/reconfigure,
   and unchanged-source evidence.
+- exact approved-account Drive authorization using Google Play services Auth
+  21.6.0, one restricted Drive scope, and no offline authorization code;
+- ephemeral access-token handling with no token, result intent, folder ID, or
+  provider response persisted, logged, or rendered;
+- bounded, non-redirecting HTTPS `files.get` of only the configured destination
+  with a minimal fields mask and cancellation-safe cleanup;
+- strict destination classification for missing/inaccessible, non-folder,
+  trashed, viewer-only, quota, authorization, transient, malformed, and ready
+  states without exposing provider payloads;
+- request/account-correlated consent that ignores callbacks retired by sign-out,
+  account change, duplicate delivery, or newer requests;
+- a protected plain-language Drive section with explicit Connect and Refresh
+  actions and no consent UI during silent checks;
+- physical public-build acceptance proving real Google resolution, writable
+  shared-folder health, force-stop/cold-start reuse without a chooser, and no
+  common token markers in persistent app data or app-process logs.
 
 Not yet implemented after these Phase 4 slices:
 
-- Google Drive authorization or destination access;
-- destination-folder verification and per-user/per-device folder creation;
+- per-user/per-device destination folder creation beneath the verified upload
+  folder;
 - any selected-folder sync behavior;
 - WorkManager scheduling, upload progress, email delivery, or recovery flow;
 - release signing or APK publication.
@@ -382,6 +399,26 @@ Phase 4 session and Downloads evidence on 2026-07-18:
 - no evidence contains an account address, device serial, path, filename,
   OAuth identifier, or token.
 
+Phase 4 Drive authorization and destination evidence on 2026-07-18:
+
+- both-flavor unit, app APK, Android-test APK, and lint tasks pass after
+  composition;
+- 19 focused instrumentation tests pass on Samsung Android user 0: 5 Drive UI,
+  4 Activity Result classification, 7 application composition, 2 Google
+  authorization-request/provider, and 1 installed network-permission test;
+- the installed public debug APK replaced the existing app in place without
+  clearing its approved local session or Downloads configuration;
+- explicit Connect traversed the real Google Play services resolution and the
+  exact configured shared destination returned writable/listable `Ready`;
+- a real force-stop and cold start restored `Access confirmed` and Drive
+  `Ready` without opening Credential Manager, an account chooser, or consent;
+- persistent app-data and app-process-log scans found zero common access-token,
+  refresh-token, `Bearer`, or Google token-prefix markers;
+- all evidence is aggregate/redacted; account, folder, token, response body,
+  device serial, and OAuth client values remain outside Git;
+- live cancel/back, Editor removal/restoration, Drive-grant revocation, offline,
+  and interrupted-consent cases remain unclaimed pre-merge gates.
+
 ## Current Passing Checks
 
 ```bash
@@ -405,16 +442,15 @@ proving a clean checkout reaches the intended fail-closed setup state.
 
 ## Immediate Goal
 
-Keep the completed session-persistence and exact-Downloads slices on draft PR
-#6, then implement Phase 4 Google Drive authorization and destination health on
-the same branch using separate sequential commits. Do not begin uploads until
-the signed-in account can authorize Drive and prove access to the configured
-shared destination without exposing its identifier.
+Keep the completed session-persistence, exact-Downloads, and Drive-connection
+slices on draft PR #6. Close the remaining safe Drive negative acceptance cases,
+then define the per-user/per-device destination and controlled create probe. Do
+not begin file uploads until that destination contract is live-proven without
+exposing its identifier.
 
 Next sequence:
 
-- implement Drive authorization as a separate consent boundary from sign-in;
-- prove shared-destination access and fail-closed revocation on the live account;
+- finish the remaining Drive cancellation, revocation, and offline live gates;
 - create and verify the per-user/per-device destination contract before upload;
 - keep the deferred whole-branch review as a pre-merge gate;
 - keep configured APKs and raw live evidence out of public CI and Git;

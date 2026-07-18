@@ -287,7 +287,7 @@ Fill these keys through an approved private channel:
 
 | Key | Required for | Value source |
 |---|---|---|
-| `vijiBackup.driveUploadFolderId` | Future Phase 4 Drive tests | Shared upload folder ID |
+| `vijiBackup.driveUploadFolderId` | Drive connection and future upload tests | Shared upload folder ID |
 | `vijiBackup.allowedGoogleAccounts` | Live auth | Comma-separated approved test accounts |
 | `vijiBackup.internalAndroidOAuthClientId` | Internal flavor identity | Android OAuth client for internal package and this signing SHA-1 |
 | `vijiBackup.publicAndroidOAuthClientId` | Public flavor identity | Android OAuth client for public package and this signing SHA-1 |
@@ -411,6 +411,20 @@ With one authorized device or Play-enabled emulator connected:
 These suites use synthetic credentials and test Compose hosts. They do not
 select real Google accounts or prove access to a user's real folders. Their
 results supplement, but never replace, the applicable live-device matrix.
+
+Run connected suites before establishing live state in that package. The
+current Gradle/AGP connected-test flow can remove its temporary target-package
+installation at the end, which also removes that package's app data. For live
+acceptance, assemble first and replace the intended user-0 app in place:
+
+```bash
+adb install --user 0 -r -t \
+  app/build/outputs/apk/public/debug/app-public-debug.apk
+```
+
+Use the internal APK path instead only when testing the internal package. Do
+not run a connected-test task for that same package again until its live-state
+evidence is complete.
 
 To run one instrumentation class:
 
@@ -571,6 +585,37 @@ Record only aggregate counts or pass/fail state. Never record the device serial,
 account address, root path, or filename. On a second manufacturer's phone,
 repeat grant, denial, scan, revocation, and repair before release; do not assume
 Samsung behavior proves every OEM implementation.
+
+### 14B. Manual Google Drive Connection Matrix
+
+Use a privately configured debug APK installed in place on Android user 0. The
+approved local session and Drive grant are separate boundaries. Never capture
+or publish the Google surface, account address, token, folder ID, or raw Drive
+response.
+
+1. Force-stop and cold-start the app. Confirm the approved app surface opens
+   without Credential Manager.
+2. In `Google Drive backup`, select `Connect Google Drive` only when the state
+   requests authorization.
+3. Complete or cancel the real Google-owned resolution according to the case.
+4. Confirm only the plain-language Drive state below; do not infer upload
+   success because this phase performs no create or upload call.
+
+| ID | Case | Expected result |
+|---|---|---|
+| DRIVE-LIVE-01 | First explicit Connect and approve | Exact configured folder becomes `Ready` only when it is listable and writable |
+| DRIVE-LIVE-02 | Cancel/back from Google resolution | `NeedsAuthorization` plus neutral not-completed notice; no destination success |
+| DRIVE-LIVE-03 | Force-stop and cold-start after approval | Local app session and prior Drive grant are reused silently; destination is checked again |
+| DRIVE-LIVE-04 | Remove Editor while retaining Viewer | Viewer-only or inaccessible state; local folders and Downloads remain intact |
+| DRIVE-LIVE-05 | Restore Editor and refresh | Destination returns to `Ready` without rebuilding local source configuration |
+| DRIVE-LIVE-06 | Revoke the app's Drive grant | Silent check cannot report ready; explicit Connect repairs authorization |
+| DRIVE-LIVE-07 | Disable network, refresh, then restore network | Temporary failure, never ready; refresh recovers after connectivity returns |
+| DRIVE-LIVE-08 | Change approved app account during/after consent | Old callback is ignored; new account receives its own silent check |
+| DRIVE-LIVE-09 | Force-stop during Google resolution and reopen | Uncorrelated result is discarded; app silently rechecks and requests repair if needed |
+
+After live acceptance, scan persistent app data and app-process logcat for
+common token markers. Report only zero/nonzero counts. Treat any match as a
+release blocker until reviewed privately.
 
 ## 15. Safe Test Evidence
 
