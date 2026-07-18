@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-phase-4-downloads-access-plan
-status: active
-last_updated: 2026-07-16
+status: complete
+last_updated: 2026-07-18
 context_role: implementation-plan
 read_when:
   - The agent touches exact top-level Downloads access, all-files permission, or direct-path scanning.
@@ -103,14 +103,14 @@ events from an old scan overwriting disable, revoke, remove, sign-out, or retry.
 
 **Modify:** `AndroidManifest.xml`, both backup-rule XML files, `AppContainer.kt`.
 
-- [ ] Write failing tests for every state-table transition, API 29/30 boundary,
+- [x] Write failing tests for every state-table transition, API 29/30 boundary,
   package-specific settings intent, unresolved-intent fallback, storage
   unavailability, permission revocation, persistence failure, and cancellation.
-- [ ] Implement the manifest permission, app-private configuration store,
+- [x] Implement the manifest permission, app-private configuration store,
   gateway, root provider, and repository with no file mutation API.
-- [ ] Prove DataStore recreation and exclusion from backup/device transfer.
-- [ ] Run focused tests and both-flavor unit/build/lint checks.
-- [ ] Commit permission/configuration independently.
+- [x] Prove DataStore recreation and exclusion from backup/device transfer.
+- [x] Run focused tests and both-flavor unit/build/lint checks.
+- [x] Commit permission/configuration independently.
 
 ## Task 2: Settings Result And Protected UI
 
@@ -122,15 +122,15 @@ events from an old scan overwriting disable, revoke, remove, sign-out, or retry.
 
 **Modify:** `MainActivity.kt`, `VijiBackupApp.kt`, `strings.xml`, composition tests.
 
-- [ ] Write failing tests for add, deny/back, grant, external revoke, repair,
+- [x] Write failing tests for add, deny/back, grant, external revoke, repair,
   disable/enable, remove, unused grant, duplicate settings launch, activity
   recreation, sign-out hiding, and approved-account switching.
-- [ ] Emit one-shot settings requests from the ViewModel and use an Activity
+- [x] Emit one-shot settings requests from the ViewModel and use an Activity
   Result launcher plus `onStart` refresh; never trust the settings result code.
-- [ ] Render Downloads as a distinct source and keep `Access ready` separate
+- [x] Render Downloads as a distinct source and keep `Access ready` separate
   from `Never backed up`.
-- [ ] Run both-flavor unit and Compose suites on Android user 0.
-- [ ] Commit UI/orchestration independently.
+- [x] Run both-flavor unit and Compose suites on Android user 0.
+- [x] Commit UI/orchestration independently.
 
 ## Task 3: Read-Only Recursive Scanner
 
@@ -140,31 +140,56 @@ events from an old scan overwriting disable, revoke, remove, sign-out, or retry.
 - `downloadsaccess/platform/IterativeDownloadsScanner.kt`
 - focused JVM/instrumented scanner and ViewModel race tests.
 
-- [ ] Write failing tests for empty/deep/wide trees, hidden entries, symlinks,
+- [x] Write failing tests for empty/deep/wide trees, hidden entries, symlinks,
   loops, root escape, unreadable root/child, disappearing/changing entries,
   cancellation at every boundary, overflow-safe counts, and late callbacks.
-- [ ] Implement an iterative non-following traversal on an injected IO
+- [x] Implement an iterative non-following traversal on an injected IO
   dispatcher. Recheck broad access and root containment immediately before open.
-- [ ] Continue siblings after per-entry failures and emit only aggregate,
+- [x] Continue siblings after per-entry failures and emit only aggregate,
   non-sensitive progress.
-- [ ] Prove before/after source sentinels are identical.
-- [ ] Commit scanner/orchestration independently.
+- [x] Prove before/after source sentinels are identical.
+- [x] Commit scanner/orchestration independently.
 
 ## Task 4: Physical Samsung Acceptance
 
-- [ ] Deny/back: no source, no scan, no ready claim.
-- [ ] Grant: exact primary Downloads becomes `Ready`; SAF mappings are unchanged.
-- [ ] Scan real Downloads: aggregate completion only; no filenames or paths in
+- [x] Deny/back: no source, no scan, no ready claim.
+- [x] Grant: exact primary Downloads becomes `Ready`; SAF mappings are unchanged.
+- [x] Scan real Downloads: aggregate completion only; no filenames or paths in
   logs/evidence.
-- [ ] Cancel a sufficiently large scan and retry successfully.
-- [ ] Revoke externally, return, and prove `Needs access` before any scan.
-- [ ] Repair, disable/enable, remove, and reconfigure.
-- [ ] Force-stop/relaunch and in-place upgrade preserve configuration and classify
+- [x] Cancel a sufficiently large scan and retry successfully.
+- [x] Revoke externally, return, and prove `Needs access` before any scan.
+- [x] Repair, disable/enable, remove, and reconfigure.
+- [x] Force-stop/relaunch and in-place upgrade preserve configuration and classify
   the current OS grant correctly.
-- [ ] Compare complete content sentinels before/after every case; mismatch count
+- [x] Compare complete content sentinels before/after every case; mismatch count
   must be zero.
-- [ ] Repeat automated coverage for both flavors and record package-specific
+- [x] Repeat automated coverage for both flavors and record package-specific
   grants separately.
+
+## Completion Evidence
+
+Closed on 2026-07-18 against a physical Samsung on Android 14, Android user 0.
+Evidence excludes account addresses, device serials, paths, and filenames.
+
+- The canonical two-flavor unit, app APK, Android-test APK, and lint matrix
+  passes after the final scanner implementation.
+- The unlocked-device Downloads Compose suite passes 5/5 with zero failures.
+- The auth-gate and real app-composition regression suite passes 16/16 with zero
+  failures on the same device.
+- A production public build survives force-stop and in-place replacement,
+  reopens without a Google chooser, reports Downloads `Ready`, and completes a
+  real visible scan.
+- A live exact-root instrumentation probe cancels, retries to a terminal result,
+  and produces an identical before/after aggregate metadata sentinel.
+- With the real OS grant revoked, a live probe fails closed before any
+  Downloads read. The visible app shows `Access required`, exposes no Scan
+  action, and remains blocked after returning from Settings without granting.
+- Restoring the OS grant returns `Ready`; disable/enable, confirmed remove,
+  unused-grant classification, and reconfiguration all pass through the visible
+  public app without touching source content.
+- Scanner tests cover deep and wide trees, hidden entries, symlinks, cycle and
+  root-escape defense, unreadable and disappearing entries, overflow,
+  cancellation, retry, partial completion, and stale terminal events.
 
 ## Exit Gate
 
@@ -176,4 +201,3 @@ events from an old scan overwriting disable, revoke, remove, sign-out, or retry.
 - Existing SAF mapping behavior and grants remain unchanged.
 - Only after this gate passes may Phase 4 Drive authorization become the active
   implementation slice.
-

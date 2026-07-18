@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-testing-plan
 status: active
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 context_role: testing
 read_when:
   - The agent writes, reviews, or plans tests.
@@ -201,7 +201,11 @@ Redacted live evidence:
 - A1-A4 reached approved state on the configured internal flavor;
 - B1 was blocked under a temporary local allowlist and normal configuration was restored;
 - backing out of Google UI recovered without cached approval;
-- A1 restart required fresh reauthentication before approval;
+- an approved cached session now survives normal relaunch, process death,
+  force-stop, reboot, and in-place APK replacement without automatically
+  opening the Google account chooser;
+- `Change account` is the explicit chooser entry point, while sign-out clears
+  the cached session;
 - Home, DocumentsUI, and activity recreation retained one approved in-process
   session without launching another Google chooser;
 - sign-out cleared the local session;
@@ -292,6 +296,36 @@ DocumentsProvider through the production scanner. This is not live acceptance.
 Crash-point tests terminate and restart the test process around real Room and URI
 grant boundaries. Deferred API 24/API 30/API 36, removable-storage, reboot, and
 cross-device-transfer cases stay visible until actual evidence exists.
+
+## Phase 4 Session And Downloads Evidence
+
+The exact contracts are owned by [[Drive Backup App Phase 4 Session Persistence
+Implementation Plan]] and [[Drive Backup App Phase 4 Downloads Access
+Implementation Plan]]. Evidence current on 2026-07-18:
+
+- both-flavor unit, app APK, Android-test APK, and lint tasks pass after the
+  session and Downloads changes;
+- the physical Downloads Compose suite passes 5/5, and the auth-gate plus app-
+  composition regression suite passes 16/16 on Samsung Android user 0;
+- force-stop and relaunch of the public build opens the approved surface without
+  a chooser, retains the configured Downloads source, and reports `Ready`;
+- a visible real Downloads scan reaches `Scan complete`; evidence contains only
+  aggregate state and no account, path, or filename;
+- a live exact-root probe cancels and retries successfully, while a before/after
+  aggregate metadata digest remains unchanged;
+- real OS grant revocation produces `Access required` before any read and hides
+  Scan; returning from Settings without granting remains blocked;
+- restoring access returns `Ready`, and live disable/enable, remove, unused-
+  grant classification, and reconfiguration preserve all phone content;
+- deterministic scanner coverage includes empty, deep, wide, hidden, symlink,
+  cycle, root-escape, unreadable, disappearing, overflow, cancellation, partial,
+  throwing, and stale-event cases.
+
+The Phase 4 Downloads milestone is closed. Physical API 24-29 fallback coverage,
+another manufacturer's phone, removable storage, and OS-protected
+`Android/data`/`Android/obb` locations remain compatibility/release matrix items;
+they are not claimed as universally accessible. Google Drive authorization and
+upload have not started and receive no acceptance credit from these tests.
 
 ## Data Set Matrix
 
