@@ -9,7 +9,9 @@ internal object DriveBuildConfiguration {
 }
 
 internal sealed interface DriveConfiguration {
-    data class Ready(val folderId: String) : DriveConfiguration
+    data class Ready(val folderId: String) : DriveConfiguration {
+        override fun toString(): String = "DriveConfiguration.Ready(folderId=REDACTED)"
+    }
 
     data object Invalid : DriveConfiguration
 }

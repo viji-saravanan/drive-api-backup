@@ -5,6 +5,16 @@ import org.junit.Test
 
 class DriveConfigurationTest {
     @Test
+    fun readyConfigurationDescriptionRedactsFolderId() {
+        val configuration = DriveConfiguration.Ready("private-folder-id")
+
+        assertEquals(
+            "DriveConfiguration.Ready(folderId=REDACTED)",
+            configuration.toString(),
+        )
+    }
+
+    @Test
     fun blankFolderIdIsInvalid() {
         assertEquals(
             DriveConfiguration.Invalid,
