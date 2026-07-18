@@ -36,13 +36,16 @@ import com.aryasubramani.vijibackup.downloadsaccess.presentation.DownloadsAccess
 import com.aryasubramani.vijibackup.downloadsaccess.presentation.DownloadsAccessUiState
 import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessContent
 import com.aryasubramani.vijibackup.folderaccess.presentation.FolderAccessUiState
+import com.aryasubramani.vijibackup.drive.presentation.DriveConnectionContent
+import com.aryasubramani.vijibackup.drive.presentation.DriveConnectionUiState
 import com.aryasubramani.vijibackup.ui.theme.VijiBackupTheme
 
 @Composable
-fun VijiBackupApp(
+internal fun VijiBackupApp(
     uiState: AuthUiState,
     folderAccessUiState: FolderAccessUiState = FolderAccessUiState(),
     downloadsAccessUiState: DownloadsAccessUiState = DownloadsAccessUiState(),
+    driveConnectionUiState: DriveConnectionUiState = DriveConnectionUiState(),
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
@@ -60,6 +63,8 @@ fun VijiBackupApp(
     onRefreshDownloads: () -> Unit = {},
     onScanDownloads: () -> Unit = {},
     onCancelDownloadsScan: () -> Unit = {},
+    onConnectDrive: () -> Unit = {},
+    onRefreshDrive: () -> Unit = {},
 ) {
     VijiBackupTheme {
         Surface(
@@ -95,6 +100,7 @@ fun VijiBackupApp(
                             uiState = uiState,
                             folderAccessUiState = folderAccessUiState,
                             downloadsAccessUiState = downloadsAccessUiState,
+                            driveConnectionUiState = driveConnectionUiState,
                             onSignOut = onSignOut,
                             onChangeAccount = onChangeAccount,
                             onAddFolder = onAddFolder,
@@ -110,6 +116,8 @@ fun VijiBackupApp(
                             onRefreshDownloads = onRefreshDownloads,
                             onScanDownloads = onScanDownloads,
                             onCancelDownloadsScan = onCancelDownloadsScan,
+                            onConnectDrive = onConnectDrive,
+                            onRefreshDrive = onRefreshDrive,
                         )
                     } else {
                         AuthGateContent(
@@ -129,6 +137,7 @@ private fun ApprovedContent(
     uiState: AuthUiState.Approved,
     folderAccessUiState: FolderAccessUiState,
     downloadsAccessUiState: DownloadsAccessUiState,
+    driveConnectionUiState: DriveConnectionUiState,
     onSignOut: () -> Unit,
     onChangeAccount: () -> Unit,
     onAddFolder: () -> Unit,
@@ -144,6 +153,8 @@ private fun ApprovedContent(
     onRefreshDownloads: () -> Unit,
     onScanDownloads: () -> Unit,
     onCancelDownloadsScan: () -> Unit,
+    onConnectDrive: () -> Unit,
+    onRefreshDrive: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -172,6 +183,12 @@ private fun ApprovedContent(
         ) {
             Text(stringResource(R.string.auth_sign_out_action))
         }
+        Spacer(Modifier.height(32.dp))
+        DriveConnectionContent(
+            uiState = driveConnectionUiState,
+            onConnect = onConnectDrive,
+            onRefresh = onRefreshDrive,
+        )
         Spacer(Modifier.height(32.dp))
         DownloadsAccessContent(
             uiState = downloadsAccessUiState,
