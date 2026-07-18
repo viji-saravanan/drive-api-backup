@@ -4,11 +4,18 @@ import com.aryasubramani.vijibackup.auth.domain.GoogleAccount
 import com.aryasubramani.vijibackup.drive.domain.DRIVE_AUTHORIZATION_SCOPE
 import com.aryasubramani.vijibackup.drive.domain.DriveConnectionResult
 
-internal data class DriveAuthorizationSnapshot(
+internal class DriveAuthorizationSnapshot(
     val accessToken: String?,
     val grantedScopes: Set<String>,
     val accountEmail: String?,
-)
+) {
+    override fun toString(): String =
+        "DriveAuthorizationSnapshot(" +
+            "accessToken=REDACTED, " +
+            "grantedScopes=${grantedScopes.size}, " +
+            "accountEmail=${if (accountEmail.isNullOrBlank()) "absent" else "present"}" +
+            ")"
+}
 
 internal sealed interface DriveAuthorizationEvaluation {
     data class Authorized(val accessToken: DriveAccessToken) : DriveAuthorizationEvaluation

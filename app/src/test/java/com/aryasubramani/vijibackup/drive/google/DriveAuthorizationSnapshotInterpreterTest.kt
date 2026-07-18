@@ -18,6 +18,17 @@ class DriveAuthorizationSnapshotInterpreterTest {
     )
 
     @Test
+    fun snapshotDescriptionNeverIncludesAccessToken() {
+        val snapshot = snapshot()
+
+        assertEquals(
+            "DriveAuthorizationSnapshot(accessToken=REDACTED, grantedScopes=1, accountEmail=present)",
+            snapshot.toString(),
+        )
+        assertFalse(snapshot.toString().contains("access-token-value"))
+    }
+
+    @Test
     fun completeBoundResultReturnsAnEphemeralRedactedToken() {
         val evaluation = interpretDriveAuthorizationSnapshot(
             expectedAccount = account,

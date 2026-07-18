@@ -14,6 +14,7 @@ junit = "4.13.2"
 junitVersion = "1.3.0"
 lifecycle = "2.10.0"
 room = "2.8.4"
+playServicesAuth = "21.6.0"
 ksp = "2.3.9"
 serialization = "1.8.1"
 
@@ -36,6 +37,7 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 google-identity-googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
+google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
