@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-index
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-18
 context_role: entrypoint
 read_when:
   - Any future AI session starts work on the Android Drive backup app.
@@ -24,7 +24,10 @@ The product is a personal Android backup app that periodically syncs user-select
 - Users sign in with their own Google account.
 - Arya owns the shared Drive parent folder and shares it with approved users as Editor.
 - The app uploads into the shared parent folder using the signed-in user account.
-- Sync target is any internal-storage folder that Android allows the user to select through the folder picker.
+- Sync targets include user-selected SAF folders plus the exact primary
+  Downloads directory through a separate explicit Android special-access flow.
+- The app never claims universal access to OS-protected app sandboxes such as
+  `Android/data` or `Android/obb`.
 - Users can configure folder mappings, sync frequency, network/mobile-data behavior, battery/charging behavior, manual sync, cancellation, and email recipients.
 - Email summaries include failed filenames and failure reasons.
 - MVP uses normal readable Drive files, not client-side encryption.
@@ -43,14 +46,16 @@ Load only the packet that matches the task. Do not read all notes by default.
 | Android engineering method | [[Drive Backup App Foundation Decisions]], [[Drive Backup App Android Engineering Research]], [[Drive Backup App Architecture]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
 | Any implementation or file edit | [[Drive Backup App Engineering Change Discipline]], then the packet for the touched feature |
 | Google sign-in, allowlist, or sign-out | [[Drive Backup App Phase 2 Auth Implementation Plan]], [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
+| Cold-launch session persistence or explicit account switching | [[Drive Backup App Phase 4 Session Persistence Implementation Plan]], [[Drive Backup App Project State]], [[Drive Backup App User Journey Gap Audit]], [[Drive Backup App Testing Plan]] |
 | Local folder picker, SAF grant, mapping, repair, or scan | [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
+| Exact Downloads, all-files access, permission repair, or direct-path scan | [[Drive Backup App Phase 4 Downloads Access Implementation Plan]], [[Drive Backup App Project State]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
 | Current Phase 3 health, scanner, controls, or closure execution | [[Drive Backup App Phase 3 Completion Execution Plan]], [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]], [[Drive Backup App Project State]], [[Drive Backup App Testing Plan]] |
 | Standard-practice gap assessment | [[Drive Backup App Standard Practice Assessment]], [[Drive Backup App Product Requirements]], [[Drive Backup App Open Questions And Assumptions]], [[Drive Backup App Source Register]] |
 | Ordinary-user behavior or phase closure | [[Drive Backup App User Journey Gap Audit]], [[Drive Backup App Product Requirements]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Testing Plan]], [[Drive Backup App Project State]] |
 | Architecture or implementation planning | [[Drive Backup App Architecture]], [[Drive Backup App Sync Semantics]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Security Privacy And Access]] |
 | Android storage, background sync, or permissions | [[Drive Backup App Architecture]], [[Drive Backup App Sync Semantics]], [[Drive Backup App Source Register]] |
 | Settings, frequency, mobile data, or cancellation | [[Drive Backup App Settings Model]], [[Drive Backup App Product Requirements]], [[Drive Backup App Sync Semantics]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Testing Plan]] |
-| Google Drive shared folder behavior | [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Architecture]], [[Drive Backup App Source Register]] |
+| Google Drive authorization or shared-folder behavior | [[Drive Backup App Project State]], [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Architecture]], [[Drive Backup App Testing Plan]], [[Drive Backup App Source Register]] |
 | Email notification design | [[Drive Backup App Product Requirements]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Source Register]] |
 | Encryption discussion | [[Drive Backup App Security Privacy And Access]], [[Drive Backup App Product Requirements]] |
 | Testing | [[Drive Backup App Fresh Laptop Setup And Test Runbook]], [[Drive Backup App Testing Plan]], [[Drive Backup App Failure Matrix]], [[Drive Backup App Product Requirements]] |
@@ -77,6 +82,8 @@ Do not infer Android, Google Drive, Gmail, Apps Script, or GitHub behavior from 
 - [[Drive Backup App Phase 2 Auth Implementation Plan]]
 - [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
 - [[Drive Backup App Phase 3 Completion Execution Plan]]
+- [[Drive Backup App Phase 4 Session Persistence Implementation Plan]]
+- [[Drive Backup App Phase 4 Downloads Access Implementation Plan]]
 - [[Drive Backup App Android Engineering Research]]
 - [[Drive Backup App Strategy]]
 - [[Drive Backup App Standard Practice Assessment]]

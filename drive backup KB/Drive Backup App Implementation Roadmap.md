@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-implementation-roadmap
 status: active
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 context_role: roadmap
 read_when:
   - The agent needs sequencing, milestones, or implementation gates.
@@ -153,6 +153,10 @@ Exit gate:
 
 ## Phase 4: Downloads Source And Drive Destination Setup
 
+Status: active. Session persistence and the exact Downloads milestone are
+complete with physical Samsung evidence. Drive authorization and destination
+setup are next.
+
 Entry prerequisites:
 
 - Phase 2 session persistence behavior is corrected and live-proven.
@@ -164,6 +168,8 @@ Load:
 - [[Drive Backup App Architecture]]
 - [[Drive Backup App Security Privacy And Access]]
 - [[Drive Backup App Source Register]]
+- [[Drive Backup App Phase 4 Session Persistence Implementation Plan]]
+- [[Drive Backup App Phase 4 Downloads Access Implementation Plan]]
 
 Deliverables:
 

@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-project-state
 status: active
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 context_role: current-state
 read_when:
   - The agent needs to understand the current local scaffold before implementation.
@@ -29,14 +29,13 @@ Knowledge base:
 ## Current Implementation
 
 Phase 1 foundation, Phase 2 authentication, the public-source workflow, and the
-implemented Phase 3 local-folder slices are integrated on `main` through PRs
-#1-#4. Their implementation packets, architecture, failure matrix, security
-rules, source register, and physical-device acceptance matrix are committed
-alongside the code. The active completion branch now contains the remaining
-typed health, durable enablement, scanner, per-mapping orchestration, protected
-control surface, and durable pending-picker sign-out recovery. The safe live
-Samsung closure matrix is complete and recorded below. The branch remains a
-draft PR until the intentionally deferred whole-branch review is performed.
+earlier Phase 3 local-folder slices are integrated on `main` through PRs #1-#4.
+The completed Phase 3 branch is the base of
+`feature/phase-4-downloads-drive-setup`. Draft PR #6 contains the first two
+Phase 4 boundaries: durable approved-session reuse with explicit account
+switching, and exact top-level Downloads access with a read-only scanner. Their
+implementation plans, source claims, and physical-device evidence are committed
+with the code. Whole-branch review remains intentionally deferred before merge.
 
 Implemented Phase 2 slices:
 
@@ -51,8 +50,10 @@ Implemented Phase 2 slices:
 - lifecycle-safe request dispatch with one-shot consumption and duplicate suppression;
 - application-scoped manual dependency container;
 - Compose auth gate, approved surface, progress, warnings, retry, and sign-out states;
-- cold-process reauthentication with approval retained across Home, picker, and
-  activity recreation while the same approved process remains alive;
+- approved cached-session restoration across normal relaunch, process death,
+  force-stop, reboot, and in-place upgrade without an automatic Google chooser;
+- explicit `Change account` and sign-out paths that remain the only normal
+  chooser/session-replacement entry points;
 - private build configuration loaded outside Git;
 - internal and public debug flavors that coexist on one device;
 - zero-secret GitHub source verification for unit, build, Android-test APK, and lint tasks;
@@ -107,12 +108,33 @@ Implemented Phase 3 slices:
 - protected folder controls for enablement, typed health, stable progress,
   scan/cancel, repair, and confirmed removal without rendering storage IDs.
 
-Not yet implemented after the integrated Phase 3 slices:
+Implemented Phase 4 slices:
 
-- the mandatory exact top-level Downloads source, which is the first Phase 4
-  milestone and requires a separate explicit all-files-access settings flow;
+- cached approved-account session reuse with fail-closed malformed-state and
+  policy revalidation behavior;
+- explicit account switching without coupling ordinary app relaunch to Google
+  provider UI;
+- a dedicated API 30+ exact primary-storage Downloads source using explicit
+  package-specific all-files-access settings, isolated from SAF mappings;
+- API 24-29 fallback to the existing read-only system tree picker;
+- typed Downloads configuration/access health, including unused grant, denied,
+  unavailable, disabled, and ready states;
+- read-only iterative exact-root traversal with no production create, write,
+  rename, move, or delete API;
+- cycle, symlink, root-escape, unreadable-entry, overflow, cancellation, retry,
+  partial-result, and stale-event defenses;
+- protected visible controls for grant/repair, enable/disable, scan/cancel,
+  remove, unused-grant review, and reconfiguration;
+- physical Samsung acceptance for force-stop persistence, visible scan,
+  denial/back, external revocation, repair, disable/enable, remove/reconfigure,
+  and unchanged-source evidence.
+
+Not yet implemented after these Phase 4 slices:
+
 - Google Drive authorization or destination access;
+- destination-folder verification and per-user/per-device folder creation;
 - any selected-folder sync behavior;
+- WorkManager scheduling, upload progress, email delivery, or recovery flow;
 - release signing or APK publication.
 
 ## Confirmed Cloud Setup State
@@ -159,7 +181,8 @@ Email notification defaults:
 - Git account switcher profiles are verified for `callmearya` and
   `viji-saravanan`; both commit with their GitHub-provided `noreply` identity.
 - Current workflow intentionally splits commits between Arya personal and Viji.
-  Never commit from Arya work.
+  Exact equality is unnecessary, but verify the intended identity before each
+  commit and push.
 - Tracked source and reachable patch content contain no configured account,
   OAuth, secret, or Drive identifier. Two pre-cleanup GitHub-generated merge
   commits on `main` still contain one collaborator's personal commit email in
@@ -199,11 +222,11 @@ Email notification defaults:
 - The physical test phone has about 1.5 GB free and is 99% used. Never delete
   user data automatically; treat low storage as an explicit test and operational risk.
 - The ordinary-user journey audit is tracked in [[Drive Backup App User Journey
-  Gap Audit]]. UX-01 is open: the current cold-process reauthentication chooser
-  appears on app relaunch and does not meet the intended standard user
-  experience. It is a Phase 2 follow-up and a prerequisite before Phase 4.
+  Gap Audit]]. UX-01, UX-02, and UX-04 are closed with physical-device evidence:
+  ordinary relaunch keeps the approved session, account changes are explicit,
+  and exact Downloads has denial, revocation, repair, and removal behavior.
 - The same audit records the remaining user-facing gaps around mapping
-  identification, Downloads access, access-versus-backup health, preflight,
+  identification, access-versus-backup health, preflight,
   cancellation, partial results, scheduling explanations, recovery, and device
   constraints. These are phase-owned gates, not reasons to change Phase 3 code
   without a scoped implementation task.
@@ -281,8 +304,8 @@ Additional Phase 3 scanner evidence on 2026-07-15:
 - all 7 resolver-facing scanner tests passed directly on Samsung user 0 for
   both internal and public flavors, and all 29 validator tests passed again;
 - the complete two-flavor JVM, app APK, and Android-test APK matrix passed;
-- whole-Downloads support is now a confirmed final-app requirement, but remains
-  a separate explicit all-files-access source rather than a false SAF claim.
+- whole-Downloads was confirmed as a separate explicit all-files-access source
+  rather than a false SAF claim; that source was later completed in Phase 4.
 
 Additional Phase 3 orchestration and core live evidence on 2026-07-15:
 
@@ -337,6 +360,25 @@ Phase 3 closure evidence on 2026-07-16:
   app-process log contained zero email, content-URI, OAuth-client, JWT-shaped,
   UUID-shaped, or live-label matches.
 
+Phase 4 session and Downloads evidence on 2026-07-18:
+
+- the canonical two-flavor unit, app APK, Android-test APK, and lint matrix
+  passes after the session and Downloads implementation;
+- the unlocked physical-device Downloads Compose suite passes 5/5, and the
+  auth-gate plus app-composition regression suite passes 16/16;
+- the public app survives force-stop and in-place replacement, opens directly
+  to the approved surface without a Google chooser, and retains its Downloads
+  configuration;
+- a visible real Downloads scan reaches `Scan complete`; a separate live probe
+  cancels, retries, and preserves an identical before/after aggregate metadata
+  sentinel;
+- real OS revocation shows `Access required` and no Scan action before any read;
+  backing out remains blocked, while restored permission returns `Ready`;
+- live disable/enable, confirmed remove, unused-grant classification, and
+  reconfiguration complete without modifying source content;
+- no evidence contains an account address, device serial, path, filename,
+  OAuth identifier, or token.
+
 ## Current Passing Checks
 
 ```bash
@@ -360,18 +402,19 @@ proving a clean checkout reaches the intended fail-closed setup state.
 
 ## Immediate Goal
 
-Push the completed Phase 3 implementation and live-acceptance closure to its
-existing draft PR. Keep the explicitly deferred whole-branch review as the only
-Phase 3 merge gate, then begin Phase 4 on a new branch from this exact Phase 3
-head when the project owner signals.
+Keep the completed session-persistence and exact-Downloads slices on draft PR
+#6, then implement Phase 4 Google Drive authorization and destination health on
+the same branch using separate sequential commits. Do not begin uploads until
+the signed-in account can authorize Drive and prove access to the configured
+shared destination without exposing its identifier.
 
 Next sequence:
 
-- push the completion branch and refresh the comprehensive draft PR;
-- run the deferred whole-branch review before merge;
+- implement Drive authorization as a separate consent boundary from sign-in;
+- prove shared-destination access and fail-closed revocation on the live account;
+- create and verify the per-user/per-device destination contract before upload;
+- keep the deferred whole-branch review as a pre-merge gate;
 - keep configured APKs and raw live evidence out of public CI and Git;
-- begin Phase 4 on explicit user signal, first closing UX-01 cold-launch sign-in
-  persistence and exact top-level Downloads access before Drive authorization.
 
 ## Next Notes
 
@@ -383,3 +426,5 @@ Next sequence:
 - [[Drive Backup App User Journey Gap Audit]]
 - [[Drive Backup App Fresh Laptop Setup And Test Runbook]]
 - [[Drive Backup App Phase 3 Local Folder Access Implementation Plan]]
+- [[Drive Backup App Phase 4 Session Persistence Implementation Plan]]
+- [[Drive Backup App Phase 4 Downloads Access Implementation Plan]]

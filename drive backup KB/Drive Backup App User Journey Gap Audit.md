@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-user-journey-gap-audit
 status: active
-last_updated: 2026-07-15
+last_updated: 2026-07-18
 context_role: user-experience-acceptance
 read_when:
   - A phase is being closed or a new user-facing workflow is being started.
@@ -28,10 +28,10 @@ network.
 
 | ID | User journey gap | Current evidence | Expected behavior | Owner and gate |
 |---|---|---|---|---|
-| UX-01 | The Google account chooser appears again after the user closes and reopens the app. | Current Phase 2 deliberately loads a cached account as `ReauthenticationRequired` and starts an authorized-account Credential Manager request on a cold process. The user reports a chooser on every reopen. | A user remains signed in across normal relaunch, process death, and phone restart. Google reauthentication is requested only after explicit sign-out, account removal, revoked access, or a security-required failure. | Phase 2 follow-up; mandatory before Phase 4 Drive setup. Test on Samsung after swipe-away, force-stop, reboot, and upgrade. |
-| UX-02 | The account used for backup is not yet a durable, obvious user decision. | The app can show the saved email during reauthentication, but the chooser is being used as a repeated entry point. | Show the current signed-in account and provide an explicit `Change account` action. Do not use incidental app relaunch as account selection. | Phase 2/4. Test approved-account switch, blocked account, account removed from device, and sign-out. |
+| UX-01 | The Google account chooser appears again after the user closes and reopens the app. | Closed: the approved cached session survives force-stop, process death, reboot, and in-place upgrade on the Samsung without opening a chooser. | A user remains signed in across normal relaunch, process death, and phone restart. Google reauthentication is requested only after explicit sign-out, account removal, revoked access, or a security-required failure. | Closed 2026-07-18. Account removal and provider-security expiry remain release cases, not ordinary-relaunch behavior. |
+| UX-02 | The account used for backup is not yet a durable, obvious user decision. | Closed: the approved account is retained and displayed; `Change account` is an explicit action and ordinary relaunch does not invoke the chooser. | Show the current signed-in account and provide an explicit `Change account` action. Do not use incidental app relaunch as account selection. | Closed 2026-07-18 for the normal journey. Blocked-account and physical account-removal cases remain release checks. |
 | UX-03 | Folder rows can be difficult to identify when folders have the same name or metadata is unavailable. | Rows use provider display names and fall back to `Folder 1`, `Folder 2`, and so on. The user already reported difficulty identifying which folder to remove. | Every mapping must have a stable user-recognizable label. Same-name folders need a safe disambiguator or an explicit user label. Never expose raw storage IDs or full sensitive paths. | Phase 3 follow-up; must close before sync setup is considered user-ready. Test duplicate names, missing metadata, reorder, restart, repair, and removal. |
-| UX-04 | Android rejects the top-level Downloads root through the normal folder picker. | This is a platform boundary, not an implementation success. The current picker correctly refuses to claim access. | Explain the restriction in plain language, offer the approved dedicated Downloads flow, show its access health, and provide a clear denial/revocation repair path. | Phase 4 first milestone. Live Samsung evidence required for grant, denial, revocation, and repair. |
+| UX-04 | Android rejects the top-level Downloads root through the normal folder picker. | Closed: API 30+ uses a dedicated explicit special-access flow; live Samsung evidence covers grant, denial/back, revocation, repair, disable/enable, remove/reconfigure, and visible real scan. | Explain the restriction in plain language, offer the approved dedicated Downloads flow, show its access health, and provide a clear denial/revocation repair path. | Closed 2026-07-18. Viji's phone and API 24-29 fallback remain compatibility-matrix checks. |
 | UX-05 | `Folder Access: Ready` can be mistaken for “backed up.” | Phase 3 currently proves persisted read access and a metadata scan, not a Drive backup. | Separate `Access ready`, `Backup not configured`, `Never backed up`, `Last backup`, `Partial success`, and `Needs attention`. | Phase 4/5/6. Add state-contract tests and live first-run verification. |
 | UX-06 | A user can reach a long-running operation without one consolidated readiness answer. | Setup preflight is required by the PRD but is not implemented yet. | Before first sync and before reconnecting Drive, show account, local access, Drive destination, network, battery, notification, storage, and email readiness with a repair action for each blocker. | Phase 4/6. A blocked preflight must explain why sync cannot start and must not silently schedule a doomed worker. |
 | UX-07 | Cancellation behavior is not yet defined from a sync user's perspective. | Phase 3 scan cancellation exists; actual upload cancellation is future work. | After Cancel, show `Cancelling`, then a terminal `Cancelled` result. Preserve completed files, retain incomplete files for retry, and never report cancellation as total failure. | Phase 5/6. Test cancellation before a file, during a file, between files, after the last file, after process death, and on retry. |
@@ -47,13 +47,12 @@ network.
 
 ### Before Phase 4 implementation
 
-- Resolve UX-01, or explicitly block Drive setup until the session policy is
-  changed and tested.
-- Define the current-account and `Change account` behavior from UX-02.
-- Define the exact top-level Downloads consent, denial, revocation, and repair
-  journey from UX-04.
-- Decide the user-visible distinction between folder access health and backup
-  health from UX-05.
+- [x] Resolve UX-01 and prove the revised session policy on a physical device.
+- [x] Define and implement current-account and `Change account` behavior.
+- [x] Implement and live-prove exact Downloads consent, denial, revocation,
+  repair, disable, removal, and reconfiguration.
+- [x] Keep local access health distinct from future backup health; Drive and
+  sync phases must now supply the missing backup states from UX-05.
 
 ### Before Phase 5/6 sync implementation
 

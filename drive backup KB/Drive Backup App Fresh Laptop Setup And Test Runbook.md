@@ -1,7 +1,7 @@
 ---
 doc_id: drive-backup-app-fresh-laptop-setup-test-runbook
 status: active
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 context_role: setup-and-repeatable-testing
 read_when:
   - A contributor or reviewer is starting on a different laptop.
@@ -459,13 +459,13 @@ Run these cases manually:
 | AUTH-LIVE-01 | Fresh launch | Signed-out gate; protected content absent |
 | AUTH-LIVE-02 | Approved account | Consent/chooser completes; access confirmed |
 | AUTH-LIVE-03 | Back out of chooser | Returns to signed out; no cached approval |
-| AUTH-LIVE-04 | Force-stop and restart after approval | Cached metadata triggers reauthentication; metadata alone never unlocks |
+| AUTH-LIVE-04 | Force-stop and restart after approval | Approved cached session unlocks local app UI without another chooser; Drive remains separately unauthorized until checked |
 | AUTH-LIVE-05 | Sign out | Local session clears and chooser state is reset |
 | AUTH-LIVE-06 | Valid Google account omitted from local allowlist | Account is blocked; protected content absent; restart is signed out |
 | AUTH-LIVE-07 | Missing Web client or empty allowlist | Setup-required state; chooser never opens |
 | AUTH-LIVE-08 | Internal and public installs | Both package IDs coexist and launch |
-| AUTH-LIVE-09 | Background an approved session and return | Protected content relocks until current credential succeeds |
-| AUTH-LIVE-10 | Remove the approved account while app is backgrounded | Return signs out or blocks; cached metadata never unlocks |
+| AUTH-LIVE-09 | Background an approved session and return | Same approved session remains visible without another chooser |
+| AUTH-LIVE-10 | Remove the approved account while app is backgrounded | Next live Google/Drive boundary signs out, blocks, or requires repair; no cloud operation trusts the local session alone |
 | AUTH-LIVE-11 | Disable network or make Play services unavailable | Stable recoverable error or signed-out state; no crash or unlock |
 | AUTH-LIVE-12 | Rotate while Google provider UI is open | No duplicate chooser, stale callback unlock, or permanent `SigningIn` |
 
@@ -500,10 +500,10 @@ Use the internal flavor and a currently approved live account. The production
 Phase 3 path does not contact Drive; do not report Drive integration from these
 cases. Phase 4 separately requires the real shared Drive destination.
 
-The exact top-level Downloads folder is a mandatory first Phase 4 milestone.
-Do not attempt to represent it as a SAF success: implement a separate explicit
-all-files-access settings flow, keep traversal read only, test permission
-revocation on the Samsung, and leave ordinary folders on the SAF path.
+The exact top-level Downloads folder is implemented as a separate Phase 4
+source. Do not represent it as a SAF success: API 30+ uses explicit all-files-
+access settings, traversal remains read only, and ordinary folders stay on the
+SAF path.
 
 Before destructive grant tests, create a dedicated, clearly named folder on the
 phone containing disposable files. Existing personal folders may be selected
@@ -518,7 +518,7 @@ only `unchanged` or a redacted mismatch count, never real relative paths.
 | FOLDER-LIVE-02 | Select representative real folders such as Documents, Camera, Pictures, WhatsApp media, and an allowed Downloads subfolder | Each allowed tree maps independently; a platform-blocked root produces a clear explanation and no mapping |
 | FOLDER-LIVE-03 | Scan a mapped real folder | Aggregate progress advances and completes without opening Drive or changing source content |
 | FOLDER-LIVE-04 | Cancel a sufficiently long scan | Progress stops promptly, the mapping remains usable, no source content changes, and retry succeeds |
-| FOLDER-LIVE-05 | Force-stop and relaunch after mapping | Reauthentication is required; after approval the mapping and read grant remain usable |
+| FOLDER-LIVE-05 | Force-stop and relaunch after mapping | Approved local session, mapping, and read grant remain usable without another chooser |
 | FOLDER-LIVE-06 | Revoke one dedicated test-tree grant with the instrumentation-only test action | That mapping becomes `Needs repair`; healthy mappings still scan |
 | FOLDER-LIVE-07 | Repair the broken mapping by selecting the same tree | Access returns without the replacement grant being accidentally released |
 | FOLDER-LIVE-08 | Remove the dedicated test mapping | The unreferenced grant is released; every source file remains unchanged |
@@ -550,6 +550,27 @@ Real user interaction is required for system picker and account chooser steps.
 An instrumentation provider may force null cursors, cycles, loading cursors, and
 provider exceptions that cannot be triggered safely on personal data, but those
 tests are supporting evidence only and cannot satisfy any `FOLDER-LIVE-*` case.
+
+### 14A. Manual Exact Downloads Matrix
+
+Use a configured debug APK on Android user 0. Never clear app data or mutate the
+phone's Downloads content. API 30+ requires a real user decision in Android's
+special-access screen; API 24-29 uses the system tree picker.
+
+| ID | Case | Expected result |
+|---|---|---|
+| DOWNLOADS-LIVE-01 | Add Downloads and back out without granting | `Access required`; no Scan action; existing SAF mappings unchanged |
+| DOWNLOADS-LIVE-02 | Grant package-specific access and return | Exact primary Downloads becomes `Ready` |
+| DOWNLOADS-LIVE-03 | Scan real Downloads | Aggregate terminal result; no path or filename in evidence; source sentinel unchanged |
+| DOWNLOADS-LIVE-04 | Cancel a sufficiently long scan and retry | First run is cancelled, retry completes, source sentinel unchanged |
+| DOWNLOADS-LIVE-05 | Revoke access externally and reopen | `Access required` before any read; no Scan action |
+| DOWNLOADS-LIVE-06 | Repair, disable/enable, remove, and reconfigure | Each state is explicit; phone files and SAF mappings remain unchanged |
+| DOWNLOADS-LIVE-07 | Force-stop, reboot, and replace APK in place | Configuration and current grant classification survive; no chooser on ordinary relaunch |
+
+Record only aggregate counts or pass/fail state. Never record the device serial,
+account address, root path, or filename. On a second manufacturer's phone,
+repeat grant, denial, scan, revocation, and repair before release; do not assume
+Samsung behavior proves every OEM implementation.
 
 ## 15. Safe Test Evidence
 
