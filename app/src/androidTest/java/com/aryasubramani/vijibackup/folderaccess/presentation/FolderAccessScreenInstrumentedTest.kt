@@ -1,5 +1,6 @@
 package com.aryasubramani.vijibackup.folderaccess.presentation
 
+import android.text.format.Formatter
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
@@ -150,11 +151,13 @@ class FolderAccessScreenInstrumentedTest {
                 R.string.folder_access_scan_progress,
                 progress.foldersVisited,
                 progress.filesDiscovered,
-                progress.knownBytes,
+                Formatter.formatShortFileSize(composeRule.activity, progress.knownBytes),
                 progress.filesWithUnknownSize,
                 progress.unreadableEntries,
             ),
         ).assertIsDisplayed()
+        composeRule.onNodeWithText(progress.knownBytes.toString(), substring = true)
+            .assertDoesNotExist()
         composeRule.onNodeWithTag(FolderAccessTestTags.cancelScanButton(mapping.id))
             .assertIsDisplayed()
             .performClick()

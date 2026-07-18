@@ -50,7 +50,7 @@
     <string name="folder_access_scan_partial">Scan complete with unreadable items</string>
     <string name="folder_access_scan_failed">Scan failed</string>
     <string name="folder_access_scan_cancelled">Scan cancelled</string>
-    <string name="folder_access_scan_progress">%1$d folders, %2$d files, %3$d bytes, %4$d unknown sizes, %5$d unreadable</string>
+    <string name="folder_access_scan_progress">%1$d folders, %2$d files, %3$s, %4$d unknown sizes, %5$d unreadable</string>
     <string name="folder_access_scan">Scan</string>
     <string name="folder_access_cancel_scan">Cancel scan</string>
     <string name="folder_access_repair">Repair</string>
@@ -102,7 +102,7 @@
     <string name="downloads_access_scan_partial">Scan complete with unreadable items</string>
     <string name="downloads_access_scan_failed">Scan failed</string>
     <string name="downloads_access_scan_cancelled">Scan cancelled</string>
-    <string name="downloads_access_scan_progress">%1$d folders, %2$d files, %3$d bytes, %4$d unknown sizes, %5$d unreadable</string>
+    <string name="downloads_access_scan_progress">%1$d folders, %2$d files, %3$s, %4$d unknown sizes, %5$d unreadable</string>
     <string name="downloads_access_scan">Scan</string>
     <string name="downloads_access_cancel_scan">Cancel scan</string>
 </resources>

@@ -1,11 +1,13 @@
 package com.aryasubramani.vijibackup.downloadsaccess.presentation
 
+import android.text.format.Formatter
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.aryasubramani.vijibackup.downloadsaccess.data.DownloadsSourceConfiguration
@@ -106,6 +108,7 @@ class DownloadsAccessScreenInstrumentedTest {
 
     @Test
     fun runningScanShowsAggregateProgressAndIsolatedCancellation() {
+        val knownBytes = 1_348_273_556L
         var cancellationRequested = false
         composeRule.setDownloadsContent(
             state = state(
@@ -114,13 +117,17 @@ class DownloadsAccessScreenInstrumentedTest {
                     DownloadsScanProgress(
                         foldersVisited = 2,
                         filesDiscovered = 3,
-                        knownBytes = 5,
+                        knownBytes = knownBytes,
                         unreadableEntries = 1,
                     ),
                 ),
             ),
             onCancelScan = { cancellationRequested = true },
         )
+        val readableSize = Formatter.formatShortFileSize(composeRule.activity, knownBytes)
+        composeRule.onNodeWithText(readableSize, substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText(knownBytes.toString(), substring = true)
+            .assertDoesNotExist()
         composeRule.onNodeWithTag(DownloadsAccessTestTags.CancelScan)
             .assertIsDisplayed()
             .assertIsEnabled()

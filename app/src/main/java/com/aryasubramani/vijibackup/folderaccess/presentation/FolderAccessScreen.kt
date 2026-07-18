@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -34,6 +35,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aryasubramani.vijibackup.R
+import com.aryasubramani.vijibackup.core.formatReadableFileSize
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderAccessHealth
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderMapping
 import com.aryasubramani.vijibackup.folderaccess.domain.FolderScanProgress
@@ -200,6 +202,7 @@ private fun FolderMappingRow(
     onRepair: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,7 +294,7 @@ private fun FolderMappingRow(
                         R.string.folder_access_scan_progress,
                         progress.foldersVisited,
                         progress.filesDiscovered,
-                        progress.knownBytes,
+                        formatReadableFileSize(context, progress.knownBytes),
                         progress.filesWithUnknownSize,
                         progress.unreadableEntries,
                     ),

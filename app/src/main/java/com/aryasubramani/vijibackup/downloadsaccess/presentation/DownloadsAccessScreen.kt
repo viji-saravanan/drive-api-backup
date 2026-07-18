@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aryasubramani.vijibackup.R
+import com.aryasubramani.vijibackup.core.formatReadableFileSize
 import com.aryasubramani.vijibackup.downloadsaccess.domain.DownloadsAccessHealth
 
 @Composable
@@ -46,6 +48,7 @@ internal fun DownloadsAccessContent(
     onScan: () -> Unit = {},
     onCancelScan: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     var showRemoveConfirmation by rememberSaveable { mutableStateOf(false) }
     val snapshot = uiState.snapshot
     val health = snapshot?.health
@@ -142,7 +145,7 @@ internal fun DownloadsAccessContent(
                             R.string.downloads_access_scan_progress,
                             progress.foldersVisited,
                             progress.filesDiscovered,
-                            progress.knownBytes,
+                            formatReadableFileSize(context, progress.knownBytes),
                             progress.filesWithUnknownSize,
                             progress.unreadableEntries,
                         ),
