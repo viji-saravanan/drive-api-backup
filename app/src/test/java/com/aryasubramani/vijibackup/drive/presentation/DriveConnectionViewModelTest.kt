@@ -88,8 +88,9 @@ class DriveConnectionViewModelTest {
         runCurrent()
         val request = connect.await()
 
-        viewModel.onAuthorizationResolutionLaunched(request.id)
+        assertTrue(viewModel.onAuthorizationResolutionLaunched(request.id))
 
+        assertEquals(request, viewModel.pendingAuthorizationRequest())
         assertEquals(request.id, viewModel.pendingAuthorizationRequestId())
         assertEquals(DriveConnectionHealth.Checking, viewModel.uiState.value.health)
         assertTrue(viewModel.uiState.value.isAwaitingAuthorization)
@@ -104,6 +105,7 @@ class DriveConnectionViewModelTest {
         assertFalse(viewModel.uiState.value.isBusy)
         assertFalse(viewModel.uiState.value.isAwaitingAuthorization)
         assertNull(viewModel.pendingAuthorizationRequestId())
+        assertNull(viewModel.pendingAuthorizationRequest())
     }
 
     @Test
@@ -118,6 +120,26 @@ class DriveConnectionViewModelTest {
         assertEquals(DriveConnectionHealth.Ready, viewModel.uiState.value.health)
         assertFalse(viewModel.uiState.value.isBusy)
         assertNull(viewModel.uiState.value.notice)
+    }
+
+    @Test
+    fun authorizationResultCanBeClaimedOnlyOnce() = runTest {
+        val viewModel = DriveConnectionViewModel()
+        val probe = async { viewModel.requests.first() }
+        viewModel.activate(account())
+        runCurrent()
+        viewModel.onResult(probe.await().id, DriveConnectionResult.NeedsAuthorization)
+        val connect = async { viewModel.requests.first() }
+        viewModel.connect()
+        runCurrent()
+        val request = connect.await()
+        assertTrue(viewModel.onAuthorizationResolutionLaunched(request.id))
+
+        assertEquals(request, viewModel.claimAuthorizationResult(request.id))
+        assertNull(viewModel.claimAuthorizationResult(request.id))
+        assertNull(viewModel.pendingAuthorizationRequest())
+        assertTrue(viewModel.uiState.value.isBusy)
+        assertFalse(viewModel.uiState.value.isAwaitingAuthorization)
     }
 
     @Test
@@ -170,7 +192,7 @@ class DriveConnectionViewModelTest {
         val requestId = request.await().id
 
         viewModel.deactivate()
-        viewModel.onAuthorizationResolutionLaunched(requestId)
+        assertFalse(viewModel.onAuthorizationResolutionLaunched(requestId))
         viewModel.onResult(requestId, DriveConnectionResult.Ready)
 
         assertEquals(DriveConnectionUiState(), viewModel.uiState.value)

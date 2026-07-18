@@ -100,13 +100,13 @@ internal class DriveConnectionViewModel : ViewModel() {
         mutableUiState.value = DriveConnectionUiState(health = result.toHealth())
     }
 
-    fun onAuthorizationResolutionLaunched(requestId: Long) {
-        val request = currentRequest ?: return
+    fun onAuthorizationResolutionLaunched(requestId: Long): Boolean {
+        val request = currentRequest ?: return false
         if (
             request.id != requestId ||
             request.mode != DriveConnectionRequestMode.Interactive
         ) {
-            return
+            return false
         }
 
         mutableUiState.value = mutableUiState.value.copy(
@@ -114,6 +114,7 @@ internal class DriveConnectionViewModel : ViewModel() {
             isAwaitingAuthorization = true,
             notice = null,
         )
+        return true
     }
 
     fun onAuthorizationCancelled(requestId: Long) {
@@ -150,10 +151,23 @@ internal class DriveConnectionViewModel : ViewModel() {
     }
 
     fun pendingAuthorizationRequestId(): Long? {
+        return pendingAuthorizationRequest()?.id
+    }
+
+    fun pendingAuthorizationRequest(): DriveConnectionRequest? {
         if (!mutableUiState.value.isAwaitingAuthorization) return null
         return currentRequest
             ?.takeIf { request -> request.mode == DriveConnectionRequestMode.Interactive }
-            ?.id
+    }
+
+    fun claimAuthorizationResult(requestId: Long): DriveConnectionRequest? {
+        val request = pendingAuthorizationRequest()
+            ?.takeIf { pending -> pending.id == requestId }
+            ?: return null
+        mutableUiState.value = mutableUiState.value.copy(
+            isAwaitingAuthorization = false,
+        )
+        return request
     }
 
     private fun beginRequest(
